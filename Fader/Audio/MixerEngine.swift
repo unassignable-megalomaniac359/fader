@@ -17,6 +17,10 @@ final class MixerEngine {
     /// Set when tap creation fails with a permission-shaped error.
     private(set) var needsAudioCapturePermission = false
 
+    /// False until the first successful HAL contact; the UI shows a waiting
+    /// state while the audio system is unreachable.
+    private(set) var isStarted = false
+
     private(set) var volumes: [String: AppVolume] = [:]
 
     @ObservationIgnored private var taps: [String: ProcessTap] = [:]
@@ -37,6 +41,7 @@ final class MixerEngine {
 
         observeApps()
         syncTaps()
+        isStarted = true
     }
 
     func volume(for app: AudioApp) -> AppVolume {

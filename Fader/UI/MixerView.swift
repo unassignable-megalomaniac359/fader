@@ -49,7 +49,18 @@ struct MixerView: View {
 
     @ViewBuilder
     private var appsSection: some View {
-        if engine.processMonitor.apps.isEmpty {
+        if !engine.isStarted {
+            HStack(spacing: 8) {
+                Spacer()
+                ProgressView()
+                    .controlSize(.small)
+                Text("Waiting for the audio system…")
+                    .font(.system(size: 12))
+                    .foregroundStyle(.secondary)
+                Spacer()
+            }
+            .padding(.vertical, 16)
+        } else if engine.processMonitor.apps.isEmpty {
             HStack {
                 Spacer()
                 VStack(spacing: 6) {

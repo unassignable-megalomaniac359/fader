@@ -1,3 +1,4 @@
+import CoreAudio
 import SwiftUI
 
 @main
@@ -7,11 +8,14 @@ struct FaderApp: App {
     init() {
         let engine = MixerEngine()
         _engine = State(initialValue: engine)
-        // Start from a queued main-actor task, not init: saved volumes still
-        // apply right after launch, but the menu bar icon appears even if the
-        // first HAL call blocks on an unresponsive coreaudiod.
-        Task { @MainActor in
-            engine.start()
+        // First HAL contact happens off the main thread: if coreaudiod is
+        // unresponsive, the detached probe hangs instead of the UI, and the
+        // mixer shows a "waiting for the audio system" state.
+        Task.detached(priority: .userInitiated) {
+            _ = try? AudioObjectID.readDefaultOutputDevice()
+            await MainActor.run {
+                engine.start()
+            }
         }
     }
 
