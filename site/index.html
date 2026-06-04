@@ -120,6 +120,9 @@
     border-radius: 11px;
     position: relative;
     margin-bottom: 12px;
+    cursor: pointer;
+    touch-action: none;
+    user-select: none;
   }
   .mock .slider::before {
     content: "";
@@ -152,9 +155,12 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 5px 4px;
+    padding: 5px 6px;
     color: var(--muted);
+    cursor: pointer;
+    border-radius: 6px;
   }
+  .mock .row:hover { background: rgba(255, 255, 255, 0.05); }
   .mock .row.active { color: var(--text); font-weight: 600; }
   .mock .row .check { margin-left: auto; color: var(--accent); }
   .mock .cap {
@@ -213,14 +219,14 @@
       <div><span class="brew">brew install --cask pantafive/tap/fader</span></div>
       <p class="fineprint">macOS 15+ &middot; Apple silicon &middot; free &amp; open source</p>
     </div>
-    <div class="mock" aria-hidden="true">
-      <div class="head"><span class="label">Output</span><span class="dev">AirPods Pro</span></div>
+    <div class="mock" id="mock">
+      <div class="head"><span class="label">Output</span><span class="dev" id="dev-name">AirPods Pro</span></div>
       <div class="slider" style="--v: 55%"><span>&#128265;</span></div>
-      <div class="row">&#128187; MacBook Speakers</div>
-      <div class="row">&#128421; Studio Display</div>
+      <div class="row" data-device="MacBook Speakers">&#128187; MacBook Speakers<span class="check"></span></div>
+      <div class="row" data-device="Studio Display">&#128421; Studio Display<span class="check"></span></div>
       <div class="cap">BLUETOOTH</div>
-      <div class="row active">&#127911; AirPods Pro <span class="check">&#10003;</span></div>
-      <div class="row">&#127911; WH-1000XM5 &middot; connect</div>
+      <div class="row active" data-device="AirPods Pro">&#127911; AirPods Pro<span class="check">&#10003;</span></div>
+      <div class="row" data-device="WH-1000XM5" data-connect="1">&#127911; <span class="bt-label">WH-1000XM5 &middot; connect</span><span class="check"></span></div>
       <hr>
       <div class="app">&#127925; Music <span class="pct">100%</span></div>
       <div class="slider" style="--v: 100%"><span>&#128266;</span></div>
@@ -258,5 +264,57 @@
     &copy; 2026 pantafive &middot; MIT License &middot; <a href="https://github.com/pantafive/fader">GitHub</a>
   </footer>
 </main>
+<script>
+  // The mockup is a toy: draggable sliders, switchable devices. No state,
+  // no network — exactly like the app, only smaller.
+  const icons = ["\u{1F507}", "\u{1F508}", "\u{1F509}", "\u{1F50A}"];
+
+  document.querySelectorAll("#mock .slider").forEach((slider) => {
+    const icon = slider.querySelector("span");
+    const label = slider.previousElementSibling?.querySelector?.(".pct");
+
+    const setValue = (event) => {
+      const rect = slider.getBoundingClientRect();
+      const pct = Math.round(Math.min(Math.max((event.clientX - rect.left) / rect.width, 0), 1) * 100);
+      slider.style.setProperty("--v", pct + "%");
+      if (label) label.textContent = pct + "%";
+      icon.textContent = pct === 0 ? icons[0] : icons[1 + Math.min(2, Math.floor(pct / 34))];
+    };
+
+    slider.addEventListener("pointerdown", (event) => {
+      slider.setPointerCapture(event.pointerId);
+      setValue(event);
+      const move = (e) => setValue(e);
+      slider.addEventListener("pointermove", move);
+      slider.addEventListener("pointerup", () => slider.removeEventListener("pointermove", move), { once: true });
+    });
+  });
+
+  document.querySelectorAll("#mock .row").forEach((row) => {
+    row.addEventListener("click", () => {
+      const activate = () => {
+        document.querySelectorAll("#mock .row").forEach((other) => {
+          other.classList.remove("active");
+          other.querySelector(".check").textContent = "";
+        });
+        row.classList.add("active");
+        row.querySelector(".check").textContent = "✓";
+        document.getElementById("dev-name").textContent = row.dataset.device;
+      };
+
+      const btLabel = row.querySelector(".bt-label");
+      if (row.dataset.connect && btLabel) {
+        btLabel.textContent = "connecting…";
+        setTimeout(() => {
+          btLabel.textContent = row.dataset.device;
+          delete row.dataset.connect;
+          activate();
+        }, 700);
+      } else {
+        activate();
+      }
+    });
+  });
+</script>
 </body>
 </html>
