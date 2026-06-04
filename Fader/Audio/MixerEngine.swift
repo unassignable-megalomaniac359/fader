@@ -13,6 +13,7 @@ final class MixerEngine {
 
     let processMonitor = AudioProcessMonitor()
     let systemVolume = SystemVolumeController()
+    let deviceMonitor = AudioDeviceMonitor()
 
     /// Set when tap creation fails with a permission-shaped error.
     private(set) var needsAudioCapturePermission = false
@@ -32,6 +33,7 @@ final class MixerEngine {
         volumes = store.load()
         processMonitor.start()
         systemVolume.start()
+        deviceMonitor.start()
 
         // Rebuild taps when the default output device changes — each aggregate
         // is pinned to a concrete device UID.

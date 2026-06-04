@@ -8,6 +8,10 @@ struct MixerView: View {
         VStack(alignment: .leading, spacing: 10) {
             masterSection
 
+            if engine.isStarted, engine.deviceMonitor.devices.count > 1 {
+                devicesSection
+            }
+
             if engine.needsAudioCapturePermission {
                 PermissionBanner()
             }
@@ -22,6 +26,15 @@ struct MixerView: View {
         }
         .padding(12)
         .frame(width: 320)
+    }
+
+    private var devicesSection: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            ForEach(engine.deviceMonitor.devices) { device in
+                DeviceRowView(device: device)
+            }
+        }
+        .padding(.horizontal, -8)
     }
 
     private var masterSection: some View {
