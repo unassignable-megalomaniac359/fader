@@ -48,8 +48,14 @@ final class AudioDeviceMonitor {
     private(set) var defaultDeviceID = AudioDeviceID.unknown
 
     @ObservationIgnored private var listeners: [HALListener] = []
+    // Not observed: stamps change on every refresh, but the view only needs
+    // them re-read when defaultDeviceID (observed) moves a device between
+    // the main list and the rarely-used group.
+    @ObservationIgnored private var lastUsed: [String: Date] = [:]
+    @ObservationIgnored private let usageStore = DeviceUsageStore()
 
     func start() {
+        lastUsed = usageStore.load()
         listeners = [
             AudioObjectID.system.listen(kAudioHardwarePropertyDevices) {
                 Task { @MainActor [weak self] in self?.refresh() }
@@ -70,8 +76,16 @@ final class AudioDeviceMonitor {
         }
     }
 
+    /// True when the device hasn't been the default output within the
+    /// retention window. The current default is always "in use" regardless of
+    /// its stamp — a fresh switch stamps asynchronously, on the next refresh.
+    func isRarelyUsed(_ device: AudioDevice) -> Bool {
+        device.id != defaultDeviceID && !DeviceUsageStore.isRecent(lastUsed[device.uid])
+    }
+
     func refresh() {
         defaultDeviceID = (try? AudioObjectID.readDefaultOutputDevice()) ?? .unknown
+        stampDefaultDevice()
 
         guard let ids = try? AudioObjectID.system.readArray(kAudioHardwarePropertyDevices, of: AudioDeviceID.self)
         else {
@@ -92,6 +106,15 @@ final class AudioDeviceMonitor {
             return AudioDevice(id: id, uid: uid, name: name, transport: transport)
         }
         .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+    }
+
+    /// Records that the current default output is in use. Writes are throttled
+    /// to one per hour per device — ample granularity for a 30-day window.
+    private func stampDefaultDevice(now: Date = Date()) {
+        guard defaultDeviceID != .unknown, let uid = try? defaultDeviceID.readDeviceUID() else { return }
+        if let stamp = lastUsed[uid], now.timeIntervalSince(stamp) < 3600 { return }
+        lastUsed[uid] = now
+        usageStore.save(lastUsed, now: now)
     }
 }
 

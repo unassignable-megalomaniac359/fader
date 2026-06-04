@@ -59,6 +59,49 @@ struct DeviceRowView: View {
     }
 }
 
+/// Wired devices that haven't been the output lately, folded behind one row.
+/// Expanding is per-popover-open state; selecting a device stamps it used and
+/// promotes it to the main list.
+struct RarelyUsedDisclosure: View {
+    let devices: [AudioDevice]
+
+    @State private var isExpanded = false
+    @State private var isHovering = false
+
+    var body: some View {
+        Button {
+            isExpanded.toggle()
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 10, weight: .semibold))
+                    .rotationEffect(.degrees(isExpanded ? 90 : 0))
+                    .foregroundStyle(.tertiary)
+                    .frame(width: 18)
+                Text("Rarely used (\(devices.count))")
+                    .font(.system(size: 12))
+                    .foregroundStyle(.secondary)
+                Spacer()
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 6)
+            .contentShape(RoundedRectangle(cornerRadius: 6))
+            .background(
+                isHovering ? AnyShapeStyle(.quaternary.opacity(0.6)) : AnyShapeStyle(.clear),
+                in: RoundedRectangle(cornerRadius: 6)
+            )
+        }
+        .buttonStyle(.plain)
+        .onHover { isHovering = $0 }
+
+        if isExpanded {
+            ForEach(devices) { device in
+                DeviceRowView(device: device)
+            }
+        }
+    }
+}
+
 /// A paired Bluetooth audio device that is not connected: dimmed row,
 /// clicking connects and routes audio to it.
 struct BluetoothRowView: View {

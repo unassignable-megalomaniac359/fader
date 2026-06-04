@@ -34,13 +34,20 @@ struct MixerView: View {
 
     /// Bluetooth devices cluster together: wired and built-in outputs first,
     /// then connected Bluetooth, then paired-but-disconnected headphones.
+    /// Wired devices that haven't been the output for 30 days collapse into
+    /// a "Rarely used" disclosure; Bluetooth is exempt.
     private var devicesSection: some View {
         let wired = engine.deviceMonitor.devices.filter { !$0.isBluetooth }
+        let rarelyUsed = wired.filter { engine.deviceMonitor.isRarelyUsed($0) }
+        let recent = wired.filter { !engine.deviceMonitor.isRarelyUsed($0) }
         let bluetooth = engine.deviceMonitor.devices.filter(\.isBluetooth)
 
         return VStack(alignment: .leading, spacing: 2) {
-            ForEach(wired) { device in
+            ForEach(recent) { device in
                 DeviceRowView(device: device)
+            }
+            if !rarelyUsed.isEmpty {
+                RarelyUsedDisclosure(devices: rarelyUsed)
             }
             if !bluetooth.isEmpty || !disconnectedBluetooth.isEmpty {
                 Text("Bluetooth")
