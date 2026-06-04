@@ -45,25 +45,27 @@
   }
   .hero {
     display: flex;
-    gap: 64px;
+    flex-direction: column;
     align-items: center;
-    flex-wrap: wrap;
+    text-align: center;
     margin-bottom: 96px;
   }
-  .hero-copy { flex: 1 1 380px; }
   h1 {
     font-size: 56px;
     font-weight: 700;
     letter-spacing: -0.02em;
-    margin-bottom: 16px;
+    margin-bottom: 28px;
   }
   .tagline {
     font-size: 21px;
     color: var(--muted);
-    margin-bottom: 32px;
+    max-width: 620px;
+    margin: 36px 0 32px;
   }
   .download {
-    display: inline-block;
+    display: block;
+    width: min(480px, 100%);
+    text-align: center;
     background: var(--accent);
     color: #fff;
     font-size: 17px;
@@ -81,9 +83,12 @@
     margin-top: 12px;
   }
   .brew {
-    display: inline-block;
+    position: relative;
+    display: block;
+    width: min(480px, 100%);
+    text-align: center;
     margin-top: 16px;
-    padding: 10px 16px;
+    padding: 10px 56px 10px 16px;
     background: rgba(255, 255, 255, 0.04);
     border: 1px solid #262a36;
     border-radius: 10px;
@@ -97,15 +102,30 @@
     color: var(--muted);
     user-select: none;
   }
+  .brew .copy {
+    position: absolute;
+    right: 6px;
+    top: 50%;
+    transform: translateY(-50%);
+    border: none;
+    background: rgba(255, 255, 255, 0.07);
+    color: var(--muted);
+    font: 600 11px -apple-system, BlinkMacSystemFont, sans-serif;
+    padding: 5px 10px;
+    border-radius: 7px;
+    cursor: pointer;
+    user-select: none;
+  }
+  .brew .copy:hover { color: var(--text); }
   /* Popover mockup — mirrors the real Fader popover */
   .mock {
-    flex: 0 0 300px;
+    width: min(420px, 100%);
     background: var(--panel);
     border: 1px solid #262a36;
-    border-radius: 16px;
-    padding: 14px;
+    border-radius: 18px;
+    padding: 16px;
     box-shadow: 0 24px 80px rgba(0, 0, 0, 0.5);
-    font-size: 13px;
+    font-size: 14px;
   }
   .mock .tabs {
     display: flex;
@@ -232,18 +252,14 @@
     margin: 40px 0 12px;
   }
   .about h2:first-child { margin-top: 0; }
-  .about p + p { margin-top: 16px; }
-  .about a { color: var(--accent); }
-  .about code {
-    font-family: ui-monospace, "SF Mono", Menlo, monospace;
-    font-size: 14px;
-    background: rgba(255, 255, 255, 0.06);
-    padding: 1px 6px;
-    border-radius: 5px;
+  .about p {
+    text-align: justify;
+    hyphens: auto;
   }
+  .about p + p { margin-top: 16px; }
   footer {
     text-align: center;
-    font-size: 13px;
+    font-size: 15px;
     color: var(--muted);
     padding-bottom: 48px;
   }
@@ -253,13 +269,7 @@
 <body>
 <main>
   <section class="hero">
-    <div class="hero-copy">
-      <h1>Fader</h1>
-      <p class="tagline">Per-app volume and one-click audio output switching, right in your Mac&nbsp;menu&nbsp;bar.</p>
-      <a class="download" href="https://github.com/pantafive/fader/releases/latest/download/Fader.dmg">Download for macOS</a>
-      <div><span class="brew">brew install --cask pantafive/tap/fader</span></div>
-      <p class="fineprint">macOS 15+ &middot; Apple silicon &middot; free &amp; open source</p>
-    </div>
+    <h1>Fader</h1>
     <div class="mock" id="mock" data-tab="out">
       <div class="tabs">
         <button class="tab active" data-tab="out" aria-label="Output">&#128266;</button>
@@ -297,6 +307,10 @@
       <hr>
       <div class="foot">Fader <span class="gear">&#9881;</span></div>
     </div>
+    <p class="tagline">Per-app volume and one-click audio output switching, right in your Mac&nbsp;menu&nbsp;bar.</p>
+    <a class="download" href="https://github.com/pantafive/fader/releases/latest/download/Fader.dmg">Download for macOS</a>
+    <span class="brew">brew install --cask pantafive/tap/fader<button class="copy" aria-label="Copy command">Copy</button></span>
+    <p class="fineprint">macOS 15+ &middot; Apple silicon &middot; free &amp; open source</p>
   </section>
 
   <section class="about">
@@ -314,7 +328,6 @@
     <p>That indicator is the limit of what is possible per app. Core Audio exposes no per-app input gain, so Fader cannot offer one; this is an OS-level API boundary, not a feature waiting on the roadmap.</p>
     <h2>Native, lightweight, private</h2>
     <p>Fader is a single signed and notarized binary of about 0.7 MB, built for Apple silicon on macOS 15 and later. It is self-contained, with no kernel extensions or virtual audio drivers to install. Free under the MIT license, it is private in a way you can check: zero telemetry, zero analytics, zero network code. The app has no way to phone home, and the website loads no external resources either.</p>
-    <p>Because the source is open, that claim is falsifiable: <a href="https://github.com/pantafive/fader">read it</a> and confirm nothing reaches out. Install with <code>brew install --cask pantafive/tap/fader</code>, or grab <a href="https://github.com/pantafive/fader/releases/latest/download/Fader.dmg">the dmg</a> from GitHub releases.</p>
   </section>
 
   <footer>
@@ -410,6 +423,14 @@
       event.stopPropagation();
       btConnected[x.closest(".row").dataset.bt] = false;
       syncBluetooth();
+
+  const copyButton = document.querySelector(".brew .copy");
+  copyButton.addEventListener("click", () => {
+    navigator.clipboard.writeText("brew install --cask pantafive/tap/fader").then(() => {
+      copyButton.textContent = "Copied";
+      setTimeout(() => { copyButton.textContent = "Copy"; }, 1500);
+    });
+  });
       ensureActive("out");
       ensureActive("in");
     });
@@ -423,6 +444,14 @@
       setTimeout(() => {
         btConnected[name] = true;
         syncBluetooth();
+
+  const copyButton = document.querySelector(".brew .copy");
+  copyButton.addEventListener("click", () => {
+    navigator.clipboard.writeText("brew install --cask pantafive/tap/fader").then(() => {
+      copyButton.textContent = "Copied";
+      setTimeout(() => { copyButton.textContent = "Copy"; }, 1500);
+    });
+  });
         const target = document.querySelector(`#mock [data-pane="out"] .row[data-bt="${name}"]`);
         if (target) activate(target);
       }, 700);
@@ -430,6 +459,14 @@
   });
 
   syncBluetooth();
+
+  const copyButton = document.querySelector(".brew .copy");
+  copyButton.addEventListener("click", () => {
+    navigator.clipboard.writeText("brew install --cask pantafive/tap/fader").then(() => {
+      copyButton.textContent = "Copied";
+      setTimeout(() => { copyButton.textContent = "Copy"; }, 1500);
+    });
+  });
 </script>
 </body>
 </html>
