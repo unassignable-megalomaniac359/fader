@@ -1,0 +1,54 @@
+name: Fader
+options:
+  bundleIdPrefix: dev.pantafive
+  deploymentTarget:
+    macOS: "15.0"
+  createIntermediateGroups: true
+
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    SWIFT_STRICT_CONCURRENCY: complete
+    MARKETING_VERSION: 0.1.0
+    CURRENT_PROJECT_VERSION: 1
+    CODE_SIGN_STYLE: Automatic
+    ENABLE_HARDENED_RUNTIME: true
+    DEAD_CODE_STRIPPING: true
+
+targets:
+  Fader:
+    type: application
+    platform: macOS
+    sources: [Fader]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: dev.pantafive.fader
+        INFOPLIST_FILE: Fader/Resources/Info.plist
+        CODE_SIGN_ENTITLEMENTS: Fader/Resources/Fader.entitlements
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+    entitlements:
+      path: Fader/Resources/Fader.entitlements
+      properties:
+        com.apple.security.device.audio-input: true
+
+  # Hostless unit tests: pure-logic sources are compiled into the bundle
+  # directly, so no app process needs to launch (LSUIElement hosts hang
+  # the test runner).
+  FaderTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - Tests
+      - Fader/Audio/VolumeStore.swift
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: true
+
+schemes:
+  Fader:
+    build:
+      targets:
+        Fader: all
+    test:
+      targets:
+        - FaderTests
