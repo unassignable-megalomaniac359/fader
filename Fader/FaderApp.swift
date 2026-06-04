@@ -5,11 +5,14 @@ struct FaderApp: App {
     @State private var engine: MixerEngine
 
     init() {
-        // Start at launch, not on first popover open — saved volumes must
-        // apply to running apps immediately.
         let engine = MixerEngine()
-        engine.start()
         _engine = State(initialValue: engine)
+        // Start from a queued main-actor task, not init: saved volumes still
+        // apply right after launch, but the menu bar icon appears even if the
+        // first HAL call blocks on an unresponsive coreaudiod.
+        Task { @MainActor in
+            engine.start()
+        }
     }
 
     var body: some Scene {

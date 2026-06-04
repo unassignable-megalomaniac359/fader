@@ -61,6 +61,7 @@ final class AudioProcessMonitor {
         }
 
         outputListeners = nextOutputListeners
+        Self.logger.info("Apps: \(nextApps.count)/\(objectIDs.count) HAL processes — \(nextApps.map(\.name).joined(separator: ", "), privacy: .public)")
         if nextApps != apps {
             apps = nextApps
         }
