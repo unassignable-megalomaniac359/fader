@@ -15,12 +15,13 @@ final class SystemVolumeController {
     private(set) var deviceName = ""
 
     @ObservationIgnored private var device = AudioObjectID.unknown
-    @ObservationIgnored private var listeners: [HALListener] = []
+    @ObservationIgnored private var defaultDeviceListener: HALListener?
+    @ObservationIgnored private var deviceListeners: [HALListener] = []
 
     func start() {
-        listeners.append(AudioObjectID.system.listen(kAudioHardwarePropertyDefaultOutputDevice) {
+        defaultDeviceListener = AudioObjectID.system.listen(kAudioHardwarePropertyDefaultOutputDevice) {
             Task { @MainActor [weak self] in self?.attachToDefaultDevice() }
-        })
+        }
         attachToDefaultDevice()
     }
 
@@ -44,14 +45,15 @@ final class SystemVolumeController {
         device = next
         deviceName = (try? device.readString(kAudioObjectPropertyName)) ?? ""
 
-        listeners = [listeners[0]]
-        listeners.append(device.listen(kAudioHardwareServiceDeviceProperty_VirtualMainVolume,
-                                       scope: kAudioDevicePropertyScopeOutput) {
+        deviceListeners = [
+            device.listen(kAudioHardwareServiceDeviceProperty_VirtualMainVolume,
+                          scope: kAudioDevicePropertyScopeOutput) {
                 Task { @MainActor [weak self] in self?.readBack() }
-            })
-        listeners.append(device.listen(kAudioDevicePropertyMute, scope: kAudioDevicePropertyScopeOutput) {
-            Task { @MainActor [weak self] in self?.readBack() }
-        })
+            },
+            device.listen(kAudioDevicePropertyMute, scope: kAudioDevicePropertyScopeOutput) {
+                Task { @MainActor [weak self] in self?.readBack() }
+            },
+        ]
         readBack()
     }
 

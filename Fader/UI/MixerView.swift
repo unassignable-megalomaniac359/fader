@@ -120,6 +120,7 @@ struct MixerView: View {
         } else {
             // MenuBarExtra windows size to the content's ideal height, and a
             // ScrollView's ideal height is zero — give it an explicit one.
+            // rowHeight tracks AppRowView's layout: name line + slider + spacing.
             let rowHeight: CGFloat = 57
             let apps = mixerApps
             ScrollView {
@@ -130,7 +131,7 @@ struct MixerView: View {
                 }
                 .padding(.vertical, 2)
             }
-            .frame(height: min(CGFloat(apps.count) * rowHeight, 342))
+            .frame(height: min(CGFloat(apps.count), 6) * rowHeight)
         }
     }
 }

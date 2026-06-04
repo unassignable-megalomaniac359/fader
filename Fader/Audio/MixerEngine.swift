@@ -29,6 +29,8 @@ final class MixerEngine {
     @ObservationIgnored private let store = VolumeStore()
     @ObservationIgnored private var deviceListener: HALListener?
     @ObservationIgnored private var appsObservation: (() -> Void)?
+    @ObservationIgnored private var saveTask: Task<Void, Never>?
+    @ObservationIgnored private var routingTask: Task<Void, Never>?
 
     func start() {
         volumes = store.load()
@@ -74,16 +76,19 @@ final class MixerEngine {
 
     /// The HAL device for a Bluetooth peer appears a moment after the link
     /// opens; its UID starts with the MAC address. Poll briefly, then route.
-    private func routeWhenAvailable(_ device: BluetoothAudioDevice, attempts: Int = 0) {
-        deviceMonitor.refresh()
-        if let halDevice = deviceMonitor.devices.first(where: { $0.matches(bluetoothID: device.id) }) {
-            deviceMonitor.setDefault(halDevice)
-            return
-        }
-        guard attempts < 16 else { return }
-        Task { @MainActor [weak self] in
-            try? await Task.sleep(for: .milliseconds(300))
-            self?.routeWhenAvailable(device, attempts: attempts + 1)
+    /// A new connect cancels the previous poll so rapid reconnects don't race.
+    private func routeWhenAvailable(_ device: BluetoothAudioDevice) {
+        routingTask?.cancel()
+        routingTask = Task { @MainActor [weak self] in
+            for _ in 0 ..< 16 {
+                guard let self, !Task.isCancelled else { return }
+                deviceMonitor.refresh()
+                if let halDevice = deviceMonitor.devices.first(where: { $0.matches(bluetoothID: device.id) }) {
+                    deviceMonitor.setDefault(halDevice)
+                    return
+                }
+                try? await Task.sleep(for: .milliseconds(300))
+            }
         }
     }
 
@@ -112,13 +117,23 @@ final class MixerEngine {
 
     private func apply(_ entry: AppVolume, to app: AudioApp) {
         volumes[app.bundleID] = entry
-        store.save(volumes)
+        scheduleSave()
 
         if let tap = taps[app.bundleID] {
             tap.volume = entry.volume
             tap.isMuted = entry.isMuted
         } else if !entry.isNeutral {
             createTap(for: app, entry: entry)
+        }
+    }
+
+    /// Slider drags call apply per pixel; coalesce the UserDefaults write.
+    private func scheduleSave() {
+        saveTask?.cancel()
+        saveTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .milliseconds(400))
+            guard !Task.isCancelled, let self else { return }
+            store.save(volumes)
         }
     }
 
@@ -148,8 +163,16 @@ final class MixerEngine {
     }
 
     private func createTap(for app: AudioApp, entry: AppVolume) {
+        let outputUID: String
         do {
-            let outputUID = try AudioObjectID.readDefaultOutputDevice().readDeviceUID()
+            outputUID = try AudioObjectID.readDefaultOutputDevice().readDeviceUID()
+        } catch {
+            // Transient device churn (output switching), not a permission issue.
+            Self.logger.error("Default device read failed: \(error.localizedDescription)")
+            return
+        }
+
+        do {
             let tap = ProcessTap(processObjectIDs: app.objectIDs, volume: entry.volume, isMuted: entry.isMuted)
             try tap.activate(outputDeviceUID: outputUID)
             taps[app.bundleID] = tap

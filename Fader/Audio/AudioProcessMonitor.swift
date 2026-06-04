@@ -14,16 +14,16 @@ final class AudioProcessMonitor {
     private(set) var apps: [AudioApp] = []
 
     @ObservationIgnored private var listListener: HALListener?
-    @ObservationIgnored private var outputListeners: [AudioObjectID: HALListener] = [:]
     @ObservationIgnored private var pendingRefresh: Task<Void, Never>?
     @ObservationIgnored private var pollTask: Task<Void, Never>?
 
     func start() {
+        // List changes (process appeared / exited) arrive as HAL notifications.
         listListener = AudioObjectID.system.listen(kAudioHardwarePropertyProcessObjectList) {
             Task { @MainActor [weak self] in self?.scheduleRefresh() }
         }
-        // The HAL reliably notifies about list changes but, in practice, not
-        // about per-process IsRunningOutput flips — poll those. Reading the
+        // Per-process IsRunningOutput flips do NOT arrive in practice
+        // (observed on macOS 26), so the playing state is polled. Reading the
         // flags of a few dozen process objects costs microseconds.
         pollTask = Task { @MainActor [weak self] in
             while !Task.isCancelled {
@@ -56,8 +56,12 @@ final class AudioProcessMonitor {
             return
         }
 
-        var groups: [pid_t: (app: NSRunningApplication, objects: [AudioObjectID], playing: Bool)] = [:]
-        var nextOutputListeners: [AudioObjectID: HALListener] = [:]
+        struct Group {
+            let app: NSRunningApplication
+            var objects: [AudioObjectID] = []
+            var playing = false
+        }
+        var groups: [pid_t: Group] = [:]
 
         for objectID in objectIDs {
             guard let pid = try? objectID.readProcessPID() else { continue }
@@ -71,16 +75,9 @@ final class AudioProcessMonitor {
                 bundleID != Bundle.main.bundleIdentifier
             else { continue }
 
-            let isPlaying = objectID.readProcessIsRunningOutput()
             let key = running.processIdentifier
-            groups[key, default: (running, [], false)].objects.append(objectID)
-            groups[key]!.playing = groups[key]!.playing || isPlaying
-
-            // Re-rank rows the moment a process starts or stops playing.
-            nextOutputListeners[objectID] = outputListeners[objectID]
-                ?? objectID.listen(kAudioProcessPropertyIsRunningOutput) {
-                    Task { @MainActor [weak self] in self?.scheduleRefresh() }
-                }
+            groups[key, default: Group(app: running)].objects.append(objectID)
+            groups[key]!.playing = groups[key]!.playing || objectID.readProcessIsRunningOutput()
         }
 
         var nextApps = groups.compactMap { pid, group -> AudioApp? in
@@ -102,7 +99,6 @@ final class AudioProcessMonitor {
             return $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
         }
 
-        outputListeners = nextOutputListeners
         if nextApps != apps {
             apps = nextApps
             let names = nextApps.map { "\($0.name)\($0.isPlaying ? "*" : "")" }.joined(separator: ", ")
@@ -115,8 +111,11 @@ final class AudioProcessMonitor {
     private typealias ResponsiblePIDFunction = @convention(c) (pid_t) -> pid_t
 
     /// `responsibility_get_pid_responsible_for_pid` maps helper processes to
-    /// the app that spawned them — the same attribution TCC uses. Not in any
-    /// public header, but stable since macOS 10.14 and widely relied upon.
+    /// the app that spawned them — the same attribution TCC uses. Private SPI:
+    /// not in any public header, but stable since macOS 10.14 and widely used
+    /// in open-source tools. If it ever disappears, the `?? pid` fallback
+    /// degrades gracefully to per-helper attribution (browser audio shows as
+    /// its helper process instead of the browser).
     private static let responsiblePIDFunction: ResponsiblePIDFunction? = {
         guard let handle = dlopen(nil, RTLD_NOW),
               let symbol = dlsym(handle, "responsibility_get_pid_responsible_for_pid")

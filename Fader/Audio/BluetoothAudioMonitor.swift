@@ -23,19 +23,28 @@ final class BluetoothAudioMonitor {
     /// Addresses with a connect/disconnect operation in flight.
     private(set) var busy: Set<String> = []
 
+    /// Enumerates off the main actor — IOBluetooth calls can block.
     func refresh() {
-        let devices = (IOBluetoothDevice.pairedDevices() ?? []).compactMap { $0 as? IOBluetoothDevice }
-        paired = devices.compactMap { device in
-            guard let address = device.addressString else { return nil }
-            // Major device class 0x04 = audio (headphones, speakers, headsets).
-            guard device.deviceClassMajor == kBluetoothDeviceClassMajorAudio else { return nil }
-            return BluetoothAudioDevice(
-                id: address,
-                name: device.name ?? address,
-                isConnected: device.isConnected()
-            )
+        Task.detached(priority: .userInitiated) {
+            let devices = Self.readPairedAudioDevices()
+            await MainActor.run { [weak self] in self?.paired = devices }
         }
-        .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+    }
+
+    private nonisolated static func readPairedAudioDevices() -> [BluetoothAudioDevice] {
+        (IOBluetoothDevice.pairedDevices() ?? [])
+            .compactMap { $0 as? IOBluetoothDevice }
+            .compactMap { device in
+                guard let address = device.addressString else { return nil }
+                // Major device class 0x04 = audio (headphones, speakers, headsets).
+                guard device.deviceClassMajor == kBluetoothDeviceClassMajorAudio else { return nil }
+                return BluetoothAudioDevice(
+                    id: address,
+                    name: device.name ?? address,
+                    isConnected: device.isConnected()
+                )
+            }
+            .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
     }
 
     /// Opens the connection off the main thread; IOBluetooth blocks for seconds.

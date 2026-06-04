@@ -88,13 +88,11 @@ final class ProcessTap: @unchecked Sendable {
         try checked(
             // @Sendable strips inferred @MainActor isolation: the HAL invokes
             // this block on its real-time IO thread, and an isolated closure
-            // would trap in dispatch_assert_queue.
+            // would trap in dispatch_assert_queue. unowned(unsafe) avoids
+            // per-buffer refcount traffic; it is safe because teardown destroys
+            // the IO proc (blocking until the callback exits) before deinit.
             AudioDeviceCreateIOProcIDWithBlock(&proc, aggregateID,
-                                               ioQueue) { @Sendable [weak self] _, input, _, output, _ in
-                guard let self else {
-                    Self.silence(output)
-                    return
-                }
+                                               ioQueue) { @Sendable [unowned(unsafe) self] _, input, _, output, _ in
                 render(input, into: output)
             },
             "create IO proc"
@@ -111,24 +109,19 @@ final class ProcessTap: @unchecked Sendable {
     /// Releasing the tap restores the app's native output.
     @MainActor
     func invalidate() {
-        if aggregateID.isValid {
-            if let procID {
-                AudioDeviceStop(aggregateID, procID)
-                AudioDeviceDestroyIOProcID(aggregateID, procID)
-            }
-            AudioHardwareDestroyAggregateDevice(aggregateID)
-        }
-        if tapID.isValid {
-            AudioHardwareDestroyProcessTap(tapID)
-        }
+        Self.destroy(aggregateID: aggregateID, tapID: tapID, procID: procID)
         procID = nil
         aggregateID = .unknown
         tapID = .unknown
     }
 
     deinit {
-        // Teardown is idempotent and thread-safe here: by the time deinit runs no
-        // other reference exists, and the HAL calls block until the IO proc exits.
+        // Safe off the main actor: no other reference exists by now, and the
+        // HAL calls block until the IO proc has exited.
+        Self.destroy(aggregateID: aggregateID, tapID: tapID, procID: procID)
+    }
+
+    private static func destroy(aggregateID: AudioObjectID, tapID: AudioObjectID, procID: AudioDeviceIOProcID?) {
         if aggregateID.isValid {
             if let procID {
                 AudioDeviceStop(aggregateID, procID)

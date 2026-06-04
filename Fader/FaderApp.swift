@@ -8,9 +8,10 @@ struct FaderApp: App {
     init() {
         let engine = MixerEngine()
         _engine = State(initialValue: engine)
-        // First HAL contact happens off the main thread: if coreaudiod is
-        // unresponsive, the detached probe hangs instead of the UI, and the
-        // mixer shows a "waiting for the audio system" state.
+        // The detached probe gates engine.start(): the first HAL contact
+        // happens off the main thread, so a wedged coreaudiod hangs the probe
+        // while the menu bar icon renders and shows a waiting state. start()
+        // only runs once the HAL has proven responsive.
         Task.detached(priority: .userInitiated) {
             _ = try? AudioObjectID.readDefaultOutputDevice()
             await MainActor.run {
