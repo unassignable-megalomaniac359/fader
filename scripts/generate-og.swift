@@ -8,7 +8,7 @@ let image = NSImage(size: NSSize(width: width, height: height))
 
 image.lockFocus()
 
-// Background gradient matching the site.
+/// Background gradient matching the site.
 let gradient = NSGradient(
     starting: NSColor(red: 0.10, green: 0.13, blue: 0.21, alpha: 1),
     ending: NSColor(red: 0.05, green: 0.055, blue: 0.07, alpha: 1)
@@ -64,7 +64,7 @@ for fader in positions {
     NSShadow().set()
 }
 
-// Wordmark and tagline on the right.
+/// Wordmark and tagline on the right.
 let title = NSAttributedString(string: "Fader", attributes: [
     .font: NSFont.systemFont(ofSize: 110, weight: .bold),
     .foregroundColor: NSColor.white,
@@ -97,6 +97,7 @@ guard let tiff = image.tiffRepresentation,
 else {
     fatalError("Failed to render OG image")
 }
+
 let output = URL(fileURLWithPath: CommandLine.arguments.count > 1 ? CommandLine.arguments[1] : "og.png")
 try! png.write(to: output)
 print("Wrote \(output.path)")

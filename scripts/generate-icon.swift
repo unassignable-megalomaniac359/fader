@@ -77,6 +77,7 @@ guard let tiff = image.tiffRepresentation,
 else {
     fatalError("Failed to render icon")
 }
+
 let output = URL(fileURLWithPath: CommandLine.arguments.count > 1 ? CommandLine.arguments[1] : "icon-1024.png")
 try! png.write(to: output)
 print("Wrote \(output.path)")
