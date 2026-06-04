@@ -20,10 +20,21 @@ struct FaderApp: App {
         }
     }
 
+    /// SwiftUI's name-based Image fails to resolve loose bundle resources in
+    /// a MenuBarExtra label; load via AppKit. isTemplate makes the system
+    /// tint the mark to match the menu bar theme.
+    private static let menuBarIcon: NSImage = {
+        let image = NSImage(named: "MenuBarIconTemplate") ?? NSImage()
+        image.isTemplate = true
+        return image
+    }()
+
     var body: some Scene {
-        MenuBarExtra("Fader", systemImage: "slider.horizontal.3") {
+        MenuBarExtra {
             MixerView()
                 .environment(engine)
+        } label: {
+            Image(nsImage: Self.menuBarIcon)
         }
         .menuBarExtraStyle(.window)
     }

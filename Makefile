@@ -4,7 +4,7 @@
 XCODEPROJ := Fader.xcodeproj
 SCHEME    := Fader
 
-.PHONY: gen build test lint format run clean icon og
+.PHONY: gen build test lint format run clean icon og menubar-icon
 
 gen:
 	xcodegen generate
@@ -40,6 +40,10 @@ icon:
 		sips -z $$((size * 2)) $$((size * 2)) /tmp/fader-icon-1024.png --out /tmp/fader.iconset/icon_$${size}x$${size}@2x.png > /dev/null; \
 	done
 	iconutil -c icns /tmp/fader.iconset -o Fader/Resources/Fader.icns
+
+# Regenerate the menu bar template icon (1x + 2x).
+menubar-icon:
+	swift scripts/generate-menubar-icon.swift Fader/Resources
 
 # Regenerate the site's Open Graph preview card.
 og:
