@@ -1,5 +1,7 @@
 # Fader
 
+[![CI](https://github.com/pantafive/fader/actions/workflows/ci.yml/badge.svg)](https://github.com/pantafive/fader/actions/workflows/ci.yml) [![Release](https://img.shields.io/github/v/release/pantafive/fader)](https://github.com/pantafive/fader/releases/latest) [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
 Volume control for macOS that lives in the menu bar: switch the output device with one click, connect Bluetooth headphones, and set a separate volume for every app. Site: [fader.pantafive.dev](https://fader.pantafive.dev).
 
 Fader is free and open source. It sends nothing anywhere — no telemetry, no analytics, no network access at all. Audio is processed on your Mac through the system's own Core Audio process taps (macOS 14.4+), so there is no kernel extension and no virtual audio driver to install.
