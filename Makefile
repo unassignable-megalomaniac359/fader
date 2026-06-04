@@ -4,6 +4,18 @@
 XCODEPROJ := Fader.xcodeproj
 SCHEME    := Fader
 
+# TCC keys permission grants to the signing identity; unsigned (ad-hoc)
+# debug builds get pinned to the binary hash and re-prompt on every
+# rebuild. Sign with the local Developer ID when present; contributors
+# without the certificate fall back to no signing.
+SIGN_ID := $(shell security find-identity -v -p codesigning 2>/dev/null \
+	| grep -o '"Developer ID Application: [^"]*"' | head -1)
+ifeq ($(SIGN_ID),)
+SIGN_FLAGS := CODE_SIGNING_ALLOWED=NO
+else
+SIGN_FLAGS := CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY=$(SIGN_ID)
+endif
+
 .PHONY: gen build test lint format run clean icon og menubar-icon
 
 gen:
@@ -11,7 +23,7 @@ gen:
 
 build: gen
 	xcodebuild -project $(XCODEPROJ) -scheme $(SCHEME) -configuration Debug \
-		CODE_SIGNING_ALLOWED=NO build
+		$(SIGN_FLAGS) build
 
 test: gen
 	xcodebuild -project $(XCODEPROJ) -scheme $(SCHEME) -configuration Debug \
