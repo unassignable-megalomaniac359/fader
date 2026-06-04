@@ -34,6 +34,11 @@ struct AppRowView: View {
             )
             .opacity(entry.isMuted ? 0.55 : 1.0)
         }
+        // Rows shown only for their saved volume (nothing audible right now)
+        // dim, so live and idle apps read apart at a glance. Still fully
+        // interactive — the knob that made an app quiet must stay reachable.
+        .opacity(app.isPlaying ? 1.0 : 0.5)
+        .animation(.easeOut(duration: 0.2), value: app.isPlaying)
         .contextMenu {
             Button("Reset to 100%") { engine.reset(app) }
         }
