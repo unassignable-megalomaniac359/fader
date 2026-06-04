@@ -14,6 +14,7 @@ final class MixerEngine {
     let processMonitor = AudioProcessMonitor()
     let systemVolume = SystemVolumeController()
     let deviceMonitor = AudioDeviceMonitor()
+    let bluetooth = BluetoothAudioMonitor()
 
     /// Set when tap creation fails with a permission-shaped error.
     private(set) var needsAudioCapturePermission = false
@@ -34,6 +35,7 @@ final class MixerEngine {
         processMonitor.start()
         systemVolume.start()
         deviceMonitor.start()
+        bluetooth.refresh()
 
         // Rebuild taps when the default output device changes — each aggregate
         // is pinned to a concrete device UID.
@@ -60,6 +62,29 @@ final class MixerEngine {
         var entry = volumes[app.bundleID] ?? AppVolume()
         entry.isMuted.toggle()
         apply(entry, to: app)
+    }
+
+    /// Connects Bluetooth headphones and routes output to them once CoreAudio
+    /// picks the device up.
+    func connectBluetooth(_ device: BluetoothAudioDevice) {
+        bluetooth.connect(device) { [weak self] connected in
+            self?.routeWhenAvailable(connected)
+        }
+    }
+
+    /// The HAL device for a Bluetooth peer appears a moment after the link
+    /// opens; its UID starts with the MAC address. Poll briefly, then route.
+    private func routeWhenAvailable(_ device: BluetoothAudioDevice, attempts: Int = 0) {
+        deviceMonitor.refresh()
+        if let halDevice = deviceMonitor.devices.first(where: { $0.matches(bluetoothID: device.id) }) {
+            deviceMonitor.setDefault(halDevice)
+            return
+        }
+        guard attempts < 16 else { return }
+        Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .milliseconds(300))
+            self?.routeWhenAvailable(device, attempts: attempts + 1)
+        }
     }
 
     /// Drops the tap for an app, restoring its native audio path.

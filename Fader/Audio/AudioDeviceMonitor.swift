@@ -9,6 +9,12 @@ struct AudioDevice: Identifiable, Hashable {
     let name: String
     let transport: UInt32
 
+    /// CoreAudio UIDs for Bluetooth devices start with the MAC address,
+    /// e.g. "50-C0-F0-00-1C-78:output" — IOBluetooth uses the same dashed form.
+    func matches(bluetoothID: String) -> Bool {
+        uid.lowercased().hasPrefix(bluetoothID.lowercased())
+    }
+
     /// SF Symbol matching the device's transport type.
     var symbolName: String {
         switch transport {

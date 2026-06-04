@@ -8,7 +8,7 @@ struct MixerView: View {
         VStack(alignment: .leading, spacing: 10) {
             outputSection
 
-            if engine.isStarted, engine.deviceMonitor.devices.count > 1 {
+            if engine.isStarted, engine.deviceMonitor.devices.count > 1 || !disconnectedBluetooth.isEmpty {
                 devicesSection
             }
 
@@ -28,13 +28,21 @@ struct MixerView: View {
         .frame(width: 320)
     }
 
+    private var disconnectedBluetooth: [BluetoothAudioDevice] {
+        engine.bluetooth.paired.filter { !$0.isConnected }
+    }
+
     private var devicesSection: some View {
         VStack(alignment: .leading, spacing: 2) {
             ForEach(engine.deviceMonitor.devices) { device in
                 DeviceRowView(device: device)
             }
+            ForEach(disconnectedBluetooth) { device in
+                BluetoothRowView(device: device)
+            }
         }
         .padding(.horizontal, -8)
+        .task { engine.bluetooth.refresh() }
     }
 
     private var outputSection: some View {

@@ -86,7 +86,11 @@ final class ProcessTap: @unchecked Sendable {
 
         var proc: AudioDeviceIOProcID?
         try checked(
-            AudioDeviceCreateIOProcIDWithBlock(&proc, aggregateID, ioQueue) { [weak self] _, input, _, output, _ in
+            // @Sendable strips inferred @MainActor isolation: the HAL invokes
+            // this block on its real-time IO thread, and an isolated closure
+            // would trap in dispatch_assert_queue.
+            AudioDeviceCreateIOProcIDWithBlock(&proc, aggregateID,
+                                               ioQueue) { @Sendable [weak self] _, input, _, output, _ in
                 guard let self else {
                     Self.silence(output)
                     return
