@@ -13,7 +13,11 @@ Fader is free and open source. It sends nothing anywhere — no telemetry, no an
 
 ## Install
 
-Download [the latest dmg](https://github.com/pantafive/fader/releases/latest/download/Fader.dmg) (signed and notarized), or build from source; a Homebrew cask is planned once releases stabilise.
+```sh
+brew install --cask pantafive/tap/fader
+```
+
+Or download [the latest dmg](https://github.com/pantafive/fader/releases/latest/download/Fader.dmg) directly — signed and notarized. Building from source needs Xcode 16+:
 
 ```sh
 git clone https://github.com/pantafive/fader.git
@@ -22,7 +26,7 @@ brew install xcodegen
 make run
 ```
 
-Requires macOS 15+ and Xcode 16+.
+Requires macOS 15+.
 
 ## Permissions
 
