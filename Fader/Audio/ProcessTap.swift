@@ -91,14 +91,15 @@ final class ProcessTap: @unchecked Sendable {
                     Self.silence(output)
                     return
                 }
-                self.render(input, into: output)
+                render(input, into: output)
             },
             "create IO proc"
         )
         procID = proc
         try checked(AudioDeviceStart(aggregateID, procID), "start aggregate device")
 
-        Self.logger.info("Tap active for process #\(self.processObjectID): tap \(tap), aggregate \(aggregate)")
+        let processID = processObjectID
+        Self.logger.info("Tap active for process #\(processID): tap \(tap), aggregate \(aggregate)")
     }
 
     /// Tears down in the HAL-required order: stop → IO proc → aggregate → tap.
@@ -166,7 +167,7 @@ final class ProcessTap: @unchecked Sendable {
             var frameGain = gain
             for frame in stride(from: 0, to: count, by: channels) {
                 frameGain += (targetGain - frameGain) * ramp
-                for channel in 0..<channels where frame + channel < count {
+                for channel in 0 ..< channels where frame + channel < count {
                     outSamples[frame + channel] = inSamples[frame + channel] * frameGain
                 }
             }

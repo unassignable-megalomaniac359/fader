@@ -6,7 +6,7 @@ struct MixerView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            masterSection
+            outputSection
 
             if engine.isStarted, engine.deviceMonitor.devices.count > 1 {
                 devicesSection
@@ -37,7 +37,7 @@ struct MixerView: View {
         .padding(.horizontal, -8)
     }
 
-    private var masterSection: some View {
+    private var outputSection: some View {
         VStack(alignment: .leading, spacing: 5) {
             HStack {
                 Text("Output")

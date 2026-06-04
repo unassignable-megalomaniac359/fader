@@ -13,7 +13,8 @@ extension AudioObjectID {
     var isValid: Bool { self != Self.unknown }
 
     private static func address(_ selector: AudioObjectPropertySelector,
-                                scope: AudioObjectPropertyScope = kAudioObjectPropertyScopeGlobal) -> AudioObjectPropertyAddress {
+                                scope: AudioObjectPropertyScope = kAudioObjectPropertyScopeGlobal)
+        -> AudioObjectPropertyAddress {
         AudioObjectPropertyAddress(mSelector: selector, mScope: scope, mElement: kAudioObjectPropertyElementMain)
     }
 

@@ -13,17 +13,17 @@ struct AudioDevice: Identifiable, Hashable {
     var symbolName: String {
         switch transport {
         case kAudioDeviceTransportTypeBluetooth, kAudioDeviceTransportTypeBluetoothLE:
-            return "airpods.gen3"
+            "airpods.gen3"
         case kAudioDeviceTransportTypeBuiltIn:
-            return "laptopcomputer"
+            "laptopcomputer"
         case kAudioDeviceTransportTypeUSB:
-            return "cable.connector"
+            "cable.connector"
         case kAudioDeviceTransportTypeDisplayPort, kAudioDeviceTransportTypeHDMI:
-            return "display"
+            "display"
         case kAudioDeviceTransportTypeAirPlay:
-            return "airplay.audio"
+            "airplay.audio"
         default:
-            return "hifispeaker"
+            "hifispeaker"
         }
     }
 }
@@ -95,7 +95,10 @@ extension AudioObjectID {
         )
         var size: UInt32 = 0
         guard AudioObjectGetPropertyDataSize(self, &address, 0, nil, &size) == noErr, size > 0 else { return 0 }
-        let listPtr = UnsafeMutableRawPointer.allocate(byteCount: Int(size), alignment: MemoryLayout<AudioBufferList>.alignment)
+        let listPtr = UnsafeMutableRawPointer.allocate(
+            byteCount: Int(size),
+            alignment: MemoryLayout<AudioBufferList>.alignment
+        )
         defer { listPtr.deallocate() }
         guard AudioObjectGetPropertyData(self, &address, 0, nil, &size, listPtr) == noErr else { return 0 }
         let buffers = UnsafeMutableAudioBufferListPointer(listPtr.assumingMemoryBound(to: AudioBufferList.self))

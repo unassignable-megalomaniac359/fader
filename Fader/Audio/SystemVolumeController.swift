@@ -47,8 +47,8 @@ final class SystemVolumeController {
         listeners = [listeners[0]]
         listeners.append(device.listen(kAudioHardwareServiceDeviceProperty_VirtualMainVolume,
                                        scope: kAudioDevicePropertyScopeOutput) {
-            Task { @MainActor [weak self] in self?.readBack() }
-        })
+                Task { @MainActor [weak self] in self?.readBack() }
+            })
         listeners.append(device.listen(kAudioDevicePropertyMute, scope: kAudioDevicePropertyScopeOutput) {
             Task { @MainActor [weak self] in self?.readBack() }
         })

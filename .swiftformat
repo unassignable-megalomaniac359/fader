@@ -4,4 +4,4 @@
 --stripunusedargs closure-only
 --self remove
 --importgrouping testable-bottom
---disable wrapMultilineStatementBraces
+--disable wrapMultilineStatementBraces,wrapPropertyBodies
