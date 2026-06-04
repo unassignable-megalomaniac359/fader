@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fader — volume control for your Mac menu bar</title>
+<meta name="description" content="Per-app volume and one-click audio output switching for macOS. Free, native, no telemetry.">
+<style>
+  :root {
+    --bg: #0d0e12;
+    --panel: #16181f;
+    --panel-2: #1d2029;
+    --text: #e8eaf0;
+    --muted: #8b90a0;
+    --accent: #5b9bff;
+    --fill: #e8eaf0;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: radial-gradient(1200px 600px at 70% -10%, #1a2236 0%, var(--bg) 55%);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+  main {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 96px 24px 48px;
+  }
+  .hero {
+    display: flex;
+    gap: 64px;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-bottom: 96px;
+  }
+  .hero-copy { flex: 1 1 380px; }
+  h1 {
+    font-size: 56px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    margin-bottom: 16px;
+  }
+  .tagline {
+    font-size: 21px;
+    color: var(--muted);
+    margin-bottom: 32px;
+  }
+  .download {
+    display: inline-block;
+    background: var(--accent);
+    color: #fff;
+    font-size: 17px;
+    font-weight: 600;
+    padding: 14px 28px;
+    border-radius: 12px;
+    text-decoration: none;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    box-shadow: 0 8px 24px rgba(91, 155, 255, 0.25);
+  }
+  .download:hover { transform: translateY(-1px); box-shadow: 0 12px 32px rgba(91, 155, 255, 0.35); }
+  .fineprint {
+    font-size: 13px;
+    color: var(--muted);
+    margin-top: 12px;
+  }
+  /* Popover mockup */
+  .mock {
+    flex: 0 0 300px;
+    background: var(--panel);
+    border: 1px solid #262a36;
+    border-radius: 16px;
+    padding: 16px;
+    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.5);
+    font-size: 13px;
+  }
+  .mock .label { font-weight: 600; margin-bottom: 8px; }
+  .mock .slider {
+    height: 28px;
+    background: var(--panel-2);
+    border-radius: 14px;
+    position: relative;
+    overflow: hidden;
+    margin-bottom: 14px;
+  }
+  .mock .slider::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    width: var(--v, 70%);
+    background: var(--fill);
+    border-radius: 14px;
+  }
+  .mock .slider span {
+    position: absolute;
+    left: 9px;
+    top: 5px;
+    z-index: 1;
+    color: #333;
+    font-size: 12px;
+  }
+  .mock .row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 4px;
+    color: var(--muted);
+  }
+  .mock .row.active { color: var(--text); }
+  .mock .row .check { margin-left: auto; color: var(--accent); }
+  .mock .app {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 10px 4px 4px;
+  }
+  .mock .app .pct { margin-left: auto; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .mock hr { border: none; border-top: 1px solid #262a36; margin: 10px 0; }
+  /* Features */
+  .features {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 20px;
+    margin-bottom: 96px;
+  }
+  .card {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid #232734;
+    border-radius: 16px;
+    padding: 24px;
+  }
+  .card h3 { font-size: 16px; margin-bottom: 8px; }
+  .card p { font-size: 14px; color: var(--muted); }
+  footer {
+    text-align: center;
+    font-size: 13px;
+    color: var(--muted);
+    padding-bottom: 48px;
+  }
+  footer a { color: var(--muted); }
+</style>
+</head>
+<body>
+<main>
+  <section class="hero">
+    <div class="hero-copy">
+      <h1>Fader</h1>
+      <p class="tagline">Per-app volume and one-click audio output switching, right in your Mac&nbsp;menu&nbsp;bar.</p>
+      <a class="download" href="https://dl.fader.pantafive.dev/Fader.dmg">Download for macOS</a>
+      <p class="fineprint">macOS 15+ &middot; Apple silicon &middot; free &amp; open source</p>
+    </div>
+    <div class="mock" aria-hidden="true">
+      <div class="label">Output</div>
+      <div class="slider" style="--v: 72%"><span>&#128264;</span></div>
+      <div class="row active">&#127911; AirPods Pro <span class="check">&#10003;</span></div>
+      <div class="row">&#128187; MacBook Speakers</div>
+      <div class="row">&#127911; WH-1000XM5 &middot; connect</div>
+      <hr>
+      <div class="app">&#127925; Music <span class="pct">100%</span></div>
+      <div class="slider" style="--v: 100%"><span>&#128266;</span></div>
+      <div class="app">&#127760; Safari <span class="pct">35%</span></div>
+      <div class="slider" style="--v: 35%"><span>&#128265;</span></div>
+    </div>
+  </section>
+
+  <section class="features">
+    <div class="card">
+      <h3>Switch outputs instantly</h3>
+      <p>Every output device one click away. Bluetooth headphones connect straight from the menu bar — audio follows automatically.</p>
+    </div>
+    <div class="card">
+      <h3>A fader for every app</h3>
+      <p>Tame a loud browser without touching your music. Volumes persist per app across launches.</p>
+    </div>
+    <div class="card">
+      <h3>Native and lightweight</h3>
+      <p>Swift and Core Audio process taps. No kernel extensions, no virtual drivers, no background bloat.</p>
+    </div>
+    <div class="card">
+      <h3>Private by design</h3>
+      <p>No telemetry, no analytics, no network access. Audio never leaves the playback pipeline on your Mac.</p>
+    </div>
+  </section>
+
+  <footer>
+    &copy; 2026 pantafive &middot; MIT License
+  </footer>
+</main>
+</body>
+</html>
