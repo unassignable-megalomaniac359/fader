@@ -37,6 +37,7 @@
     font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
     line-height: 1.6;
     min-height: 100vh;
+    overflow-x: hidden;
   }
   main {
     max-width: 960px;
@@ -117,6 +118,125 @@
     user-select: none;
   }
   .brew .copy:hover { color: var(--text); }
+  /* Stage — sources flow through the popover into the active device */
+  .stage {
+    position: relative;
+    width: min(1060px, calc(100vw - 32px));
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(300px, 420px) minmax(0, 1fr);
+    gap: 44px;
+    align-items: center;
+    text-align: left;
+  }
+  #flows {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    overflow: visible;
+    transition: opacity 0.35s ease;
+  }
+  #flows .beam { fill: none; stroke: var(--accent); opacity: 0.14; }
+  #flows .dots {
+    fill: none;
+    stroke: var(--accent);
+    stroke-linecap: round;
+    stroke-dasharray: 1 12;
+    animation: flow 1.2s linear infinite;
+  }
+  @keyframes flow { to { stroke-dashoffset: -26; } }
+  .side {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    position: relative;
+    z-index: 1;
+    transition: opacity 0.35s ease;
+  }
+  .stage[data-tab="in"] .side,
+  .stage[data-tab="in"] #flows { opacity: 0.12; }
+  .stage[data-tab="in"] .side { pointer-events: none; }
+  .side .cap2 {
+    color: var(--muted);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    margin: 0 2px;
+  }
+  /* Side cards live in the "system" layer — darker than the app panel */
+  .scard {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: #101218;
+    border: 1px solid #1f2330;
+    border-radius: 12px;
+    padding: 12px 14px;
+    font-size: 13px;
+  }
+  .side-apps { align-self: end; padding-bottom: 30px; }
+  .scard .meta { display: flex; flex-direction: column; line-height: 1.35; min-width: 0; }
+  .scard .name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .scard .sub { font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  /* Equalizer — bars dance at full range, the card squashes them by volume */
+  .eq {
+    display: flex;
+    align-items: flex-end;
+    gap: 3px;
+    height: 26px;
+    margin-left: auto;
+    transform: scaleY(var(--amp, 1));
+    transform-origin: bottom;
+    transition: transform 0.15s ease;
+  }
+  .eq i {
+    width: 4px;
+    height: 100%;
+    background: linear-gradient(to top, var(--accent), #9cc4ff);
+    border-radius: 2px;
+    transform-origin: bottom;
+    animation: eq 0.9s ease-in-out infinite alternate;
+  }
+  .eq i:nth-child(1) { animation-duration: 0.78s; animation-delay: -0.40s; }
+  .eq i:nth-child(2) { animation-duration: 0.62s; animation-delay: -0.15s; }
+  .eq i:nth-child(3) { animation-duration: 0.94s; animation-delay: -0.62s; }
+  .eq i:nth-child(4) { animation-duration: 0.71s; animation-delay: -0.28s; }
+  .eq i:nth-child(5) { animation-duration: 0.86s; animation-delay: -0.05s; }
+  @keyframes eq {
+    from { transform: scaleY(0.18); }
+    to { transform: scaleY(1); }
+  }
+  .dcard { cursor: pointer; transition: border-color 0.25s ease, box-shadow 0.25s ease, opacity 0.25s ease; }
+  .dcard:hover { border-color: #343a4c; }
+  .dcard .state { font-size: 11px; color: var(--muted); }
+  .dcard.active { border-color: rgba(91, 155, 255, 0.55); box-shadow: 0 0 26px rgba(91, 155, 255, 0.16); }
+  .dcard.active .state { color: var(--accent); }
+  .dcard.off { opacity: 0.45; border-style: dashed; }
+  .dico { position: relative; font-size: 16px; line-height: 1; }
+  .dcard.active .dico::after {
+    content: "";
+    position: absolute;
+    inset: -7px;
+    border: 1.5px solid rgba(91, 155, 255, 0.5);
+    border-radius: 50%;
+    animation: pulse 1.6s ease-out infinite;
+  }
+  @keyframes pulse {
+    from { transform: scale(0.55); opacity: 0.9; }
+    to { transform: scale(1.25); opacity: 0; }
+  }
+  @media (max-width: 959px) {
+    .stage { grid-template-columns: minmax(0, 1fr); justify-items: center; }
+    #flows { display: none; }
+    .side { flex-direction: row; flex-wrap: wrap; justify-content: center; width: 100%; }
+    .side-apps { align-self: auto; padding-bottom: 0; }
+    .side .cap2 { flex-basis: 100%; text-align: center; }
+    .side .scard { flex: 0 1 220px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .eq i, #flows .dots, .dcard.active .dico::after { animation: none; }
+  }
   /* Popover mockup — mirrors the real Fader popover */
   .mock {
     width: min(420px, 100%);
@@ -126,6 +246,8 @@
     padding: 16px;
     box-shadow: 0 24px 80px rgba(0, 0, 0, 0.5);
     font-size: 14px;
+    position: relative;
+    z-index: 1;
   }
   .mock .tabs {
     display: flex;
@@ -270,42 +392,84 @@
 <main>
   <section class="hero">
     <h1>Fader</h1>
-    <div class="mock" id="mock" data-tab="out">
-      <div class="tabs">
-        <button class="tab active" data-tab="out" aria-label="Output">&#128266;</button>
-        <button class="tab" data-tab="in" aria-label="Microphone">&#127908;</button>
+    <div class="stage" id="stage" data-tab="out">
+      <svg id="flows" aria-hidden="true">
+        <path class="beam" data-flow="music"/>
+        <path class="beam" data-flow="safari"/>
+        <path class="beam" data-flow="out"/>
+        <path class="dots" data-flow="music"/>
+        <path class="dots" data-flow="safari"/>
+        <path class="dots" data-flow="out"/>
+      </svg>
+      <div class="side side-apps" aria-hidden="true">
+        <div class="cap2">NOW PLAYING</div>
+        <div class="scard" data-app-card="music" style="--amp: 1">
+          <span>&#127925;</span>
+          <span class="meta"><span class="name">Music</span><span class="sub apct">100%</span></span>
+          <span class="eq"><i></i><i></i><i></i><i></i><i></i></span>
+        </div>
+        <div class="scard" data-app-card="safari" style="--amp: 0.35">
+          <span>&#127760;</span>
+          <span class="meta"><span class="name">Safari</span><span class="sub apct">35%</span></span>
+          <span class="eq"><i></i><i></i><i></i><i></i><i></i></span>
+        </div>
       </div>
-      <div data-pane="out">
-        <div class="head"><span class="label">Output</span><span class="dev" id="dev-name-out">AirPods Pro</span></div>
-        <div class="slider" style="--v: 55%"><span>&#128265;</span></div>
-        <div class="row active" data-device="AirPods Pro" data-bt="AirPods Pro">&#127911; AirPods Pro<span class="x" title="Disconnect">&#10005;</span><span class="check">&#10003;</span></div>
-        <div class="row" data-device="MacBook Speakers">&#128187; MacBook Speakers<span class="check"></span></div>
-        <div class="row" data-device="Studio Display">&#128421; Studio Display<span class="check"></span></div>
-        <div class="row" data-device="WH-1000XM5" data-bt="WH-1000XM5">&#127911; WH-1000XM5<span class="x" title="Disconnect">&#10005;</span><span class="check"></span></div>
+      <div class="mock" id="mock" data-tab="out">
+        <div class="tabs">
+          <button class="tab active" data-tab="out" aria-label="Output">&#128266;</button>
+          <button class="tab" data-tab="in" aria-label="Microphone">&#127908;</button>
+        </div>
+        <div data-pane="out">
+          <div class="head"><span class="label">Output</span><span class="dev" id="dev-name-out">AirPods Pro</span></div>
+          <div class="slider" data-master="out" style="--v: 55%"><span>&#128265;</span></div>
+          <div class="row active" data-device="AirPods Pro" data-bt="AirPods Pro">&#127911; AirPods Pro<span class="x" title="Disconnect">&#10005;</span><span class="check">&#10003;</span></div>
+          <div class="row" data-device="MacBook Speakers">&#128187; MacBook Speakers<span class="check"></span></div>
+          <div class="row" data-device="Studio Display">&#128421; Studio Display<span class="check"></span></div>
+          <div class="row" data-device="WH-1000XM5" data-bt="WH-1000XM5">&#127911; WH-1000XM5<span class="x" title="Disconnect">&#10005;</span><span class="check"></span></div>
+        </div>
+        <div data-pane="in">
+          <div class="head"><span class="label">Input</span><span class="dev" id="dev-name-in">MacBook Microphone</span></div>
+          <div class="slider" style="--v: 70%"><span>&#127908;</span></div>
+          <div class="row active" data-device="MacBook Microphone">&#128187; MacBook Microphone<span class="check">&#10003;</span></div>
+          <div class="row" data-device="AirPods Pro" data-bt="AirPods Pro">&#127911; AirPods Pro<span class="x" title="Disconnect">&#10005;</span><span class="check"></span></div>
+          <div class="row" data-device="WH-1000XM5" data-bt="WH-1000XM5">&#127911; WH-1000XM5<span class="x" title="Disconnect">&#10005;</span><span class="check"></span></div>
+        </div>
+        <div class="cap" id="bt-cap">BLUETOOTH</div>
+        <div class="row" data-connect="AirPods Pro">&#127911; <span class="bt-label">AirPods Pro &middot; connect</span><span class="check"></span></div>
+        <div class="row" data-connect="WH-1000XM5">&#127911; <span class="bt-label">WH-1000XM5 &middot; connect</span><span class="check"></span></div>
+        <hr>
+        <div data-pane="out">
+          <div class="app">&#127925; Music <span class="pct">100%</span></div>
+          <div class="slider" data-app="music" style="--v: 100%"><span>&#128266;</span></div>
+          <div class="app">&#127760; Safari <span class="pct">35%</span></div>
+          <div class="slider" data-app="safari" style="--v: 35%"><span>&#128265;</span></div>
+        </div>
+        <div data-pane="in">
+          <div class="app">&#128249; Zoom <span class="rec">&#9679;</span></div>
+          <div class="app">&#127909; QuickTime Player <span class="rec">&#9679;</span></div>
+        </div>
+        <hr>
+        <div class="foot">Fader <span class="gear">&#9881;</span></div>
       </div>
-      <div data-pane="in">
-        <div class="head"><span class="label">Input</span><span class="dev" id="dev-name-in">MacBook Microphone</span></div>
-        <div class="slider" style="--v: 70%"><span>&#127908;</span></div>
-        <div class="row active" data-device="MacBook Microphone">&#128187; MacBook Microphone<span class="check">&#10003;</span></div>
-        <div class="row" data-device="AirPods Pro" data-bt="AirPods Pro">&#127911; AirPods Pro<span class="x" title="Disconnect">&#10005;</span><span class="check"></span></div>
-        <div class="row" data-device="WH-1000XM5" data-bt="WH-1000XM5">&#127911; WH-1000XM5<span class="x" title="Disconnect">&#10005;</span><span class="check"></span></div>
+      <div class="side" aria-hidden="true">
+        <div class="cap2">DEVICES</div>
+        <div class="scard dcard" data-dev="AirPods Pro">
+          <span class="dico">&#127911;</span>
+          <span class="meta"><span class="name">AirPods Pro</span><span class="sub state">Active</span></span>
+        </div>
+        <div class="scard dcard" data-dev="MacBook Speakers">
+          <span class="dico">&#128187;</span>
+          <span class="meta"><span class="name">MacBook Speakers</span><span class="sub state">Ready</span></span>
+        </div>
+        <div class="scard dcard" data-dev="Studio Display">
+          <span class="dico">&#128421;</span>
+          <span class="meta"><span class="name">Studio Display</span><span class="sub state">Ready</span></span>
+        </div>
+        <div class="scard dcard" data-dev="WH-1000XM5">
+          <span class="dico">&#127911;</span>
+          <span class="meta"><span class="name">WH-1000XM5</span><span class="sub state">Disconnected</span></span>
+        </div>
       </div>
-      <div class="cap" id="bt-cap">BLUETOOTH</div>
-      <div class="row" data-connect="AirPods Pro">&#127911; <span class="bt-label">AirPods Pro &middot; connect</span><span class="check"></span></div>
-      <div class="row" data-connect="WH-1000XM5">&#127911; <span class="bt-label">WH-1000XM5 &middot; connect</span><span class="check"></span></div>
-      <hr>
-      <div data-pane="out">
-        <div class="app">&#127925; Music <span class="pct">100%</span></div>
-        <div class="slider" style="--v: 100%"><span>&#128266;</span></div>
-        <div class="app">&#127760; Safari <span class="pct">35%</span></div>
-        <div class="slider" style="--v: 35%"><span>&#128265;</span></div>
-      </div>
-      <div data-pane="in">
-        <div class="app">&#128249; Zoom <span class="rec">&#9679;</span></div>
-        <div class="app">&#127909; QuickTime Player <span class="rec">&#9679;</span></div>
-      </div>
-      <hr>
-      <div class="foot">Fader <span class="gear">&#9881;</span></div>
     </div>
     <p class="tagline">Per-app volume and one-click audio output switching, right in your Mac&nbsp;menu&nbsp;bar.</p>
     <a class="download" href="https://github.com/pantafive/fader/releases/latest/download/Fader.dmg">Download for macOS</a>
@@ -336,137 +500,236 @@
 </main>
 <script>
   // The mockup is a toy: draggable sliders, switchable devices. No state,
-  // no network — exactly like the app, only smaller.
-  const icons = ["\u{1F507}", "\u{1F508}", "\u{1F509}", "\u{1F50A}"];
+  // no network — exactly like the app, only smaller. The side panels and
+  // flow curves visualize the same state: sources on the left, devices on
+  // the right, audio streaming through the popover.
+  (() => {
+    const stage = document.getElementById("stage");
+    const mock = document.getElementById("mock");
+    const icons = ["\u{1F507}", "\u{1F508}", "\u{1F509}", "\u{1F50A}"];
+    const btConnected = { "AirPods Pro": true, "WH-1000XM5": false };
 
-  document.querySelectorAll("#mock .slider").forEach((slider) => {
-    const icon = slider.querySelector("span");
-    const label = slider.previousElementSibling?.querySelector?.(".pct");
+    const appSliders = {
+      music: document.querySelector('#mock .slider[data-app="music"]'),
+      safari: document.querySelector('#mock .slider[data-app="safari"]'),
+    };
+    const volumeOf = (slider) => parseInt(slider.style.getPropertyValue("--v"), 10) || 0;
+    const masterSlider = document.querySelector('#mock .slider[data-master="out"]');
+    // What you'd hear: the app's fader scaled by the master output volume.
+    const heardVolume = (slider) => (volumeOf(slider) * volumeOf(masterSlider)) / 100;
+    const activeOutRow = () => document.querySelector('#mock [data-pane="out"] .row.active');
 
-    const setValue = (event) => {
-      const rect = slider.getBoundingClientRect();
-      const pct = Math.round(Math.min(Math.max((event.clientX - rect.left) / rect.width, 0), 1) * 100);
-      slider.style.setProperty("--v", pct + "%");
-      if (label) label.textContent = pct + "%";
-      icon.textContent = pct === 0 ? icons[0] : icons[1 + Math.min(2, Math.floor(pct / 34))];
+    // --- Flow curves: app card → its slider in the mock, active row → device card.
+    const flowPaths = {};
+    document.querySelectorAll("#flows path").forEach((path) => {
+      (flowPaths[path.dataset.flow] ??= []).push(path);
+    });
+
+    const setFlow = (key, x1, y1, x2, y2, volume) => {
+      const bend = (x2 - x1) * 0.45;
+      const d = `M ${x1} ${y1} C ${x1 + bend} ${y1}, ${x2 - bend} ${y2}, ${x2} ${y2}`;
+      const width = 1.2 + (volume / 100) * 2.2;
+      for (const path of flowPaths[key]) {
+        path.setAttribute("d", d);
+        path.style.opacity = volume === 0 ? "0" : "";
+        if (path.classList.contains("beam")) {
+          path.style.strokeWidth = width * 3;
+        } else {
+          path.style.strokeWidth = width;
+          path.style.animationDuration = (1.7 - volume / 100).toFixed(2) + "s";
+        }
+      }
     };
 
-    slider.addEventListener("pointerdown", (event) => {
-      slider.setPointerCapture(event.pointerId);
-      setValue(event);
-      const move = (e) => setValue(e);
-      const stop = () => {
-        slider.removeEventListener("pointermove", move);
-        slider.removeEventListener("pointerup", stop);
-        slider.removeEventListener("pointercancel", stop);
-      };
-      slider.addEventListener("pointermove", move);
-      slider.addEventListener("pointerup", stop);
-      slider.addEventListener("pointercancel", stop);
-    });
-  });
+    const hideFlow = (key) => {
+      for (const path of flowPaths[key]) path.style.opacity = "0";
+    };
 
-  document.querySelectorAll("#mock .tab").forEach((tab) => {
-    tab.addEventListener("click", () => {
-      document.querySelectorAll("#mock .tab").forEach((other) => other.classList.remove("active"));
-      tab.classList.add("active");
-      document.getElementById("mock").dataset.tab = tab.dataset.tab;
-    });
-  });
+    const drawFlows = () => {
+      const svg = document.getElementById("flows");
+      if (!svg.clientWidth) return; // collapsed layout — no curves
+      const stageRect = stage.getBoundingClientRect();
+      svg.setAttribute("viewBox", `0 0 ${stageRect.width} ${stageRect.height}`);
+      const rel = (rect) => ({
+        left: rect.left - stageRect.left,
+        right: rect.right - stageRect.left,
+        cy: rect.top + rect.height / 2 - stageRect.top,
+      });
+      const mockRect = rel(mock.getBoundingClientRect());
 
-  // Bluetooth, like in the app: connected devices sit in both device lists,
-  // hover shows a disconnect ✕, disconnected ones wait in the shared
-  // BLUETOOTH section and reconnect (routing output there) on click.
-  const btConnected = { "AirPods Pro": true, "WH-1000XM5": false };
-
-  const syncBluetooth = () => {
-    document.querySelectorAll("#mock [data-bt]").forEach((row) => {
-      row.style.display = btConnected[row.dataset.bt] ? "" : "none";
-    });
-    let anyDisconnected = false;
-    document.querySelectorAll("#mock [data-connect]").forEach((row) => {
-      const connected = btConnected[row.dataset.connect];
-      row.style.display = connected ? "none" : "";
-      if (!connected) {
-        row.querySelector(".bt-label").textContent = row.dataset.connect + " · connect";
-        anyDisconnected = true;
+      for (const [key, slider] of Object.entries(appSliders)) {
+        const card = rel(document.querySelector(`[data-app-card="${key}"]`).getBoundingClientRect());
+        const sliderRect = slider.getBoundingClientRect();
+        const y = sliderRect.width ? rel(sliderRect).cy : card.cy; // pane hidden → level run
+        setFlow(key, card.right + 2, card.cy, mockRect.left - 2, y, heardVolume(slider));
       }
+
+      const target = document.querySelector(".dcard.active");
+      if (!target) return hideFlow("out");
+      const rowRect = activeOutRow()?.getBoundingClientRect();
+      const y = rowRect?.width ? rel(rowRect).cy : mockRect.cy;
+      const card = rel(target.getBoundingClientRect());
+      const volume = Math.max(...Object.values(appSliders).map(heardVolume));
+      setFlow("out", mockRect.right + 2, y, card.left - 2, card.cy, volume);
+    };
+
+    // --- Side panels mirror the mock's state; they never hold state of their own.
+    const updateScene = () => {
+      for (const [key, slider] of Object.entries(appSliders)) {
+        const card = document.querySelector(`[data-app-card="${key}"]`);
+        card.style.setProperty("--amp", Math.max(heardVolume(slider) / 100, 0.04));
+        card.querySelector(".apct").textContent = volumeOf(slider) + "%";
+      }
+      const active = activeOutRow()?.dataset.device;
+      document.querySelectorAll(".dcard").forEach((card) => {
+        const name = card.dataset.dev;
+        const off = name in btConnected && !btConnected[name];
+        card.classList.toggle("off", off);
+        card.classList.toggle("active", !off && name === active);
+        card.querySelector(".state").textContent = off ? "Disconnected" : name === active ? "Active" : "Ready";
+      });
+      drawFlows();
+    };
+
+    // --- Sliders
+    document.querySelectorAll("#mock .slider").forEach((slider) => {
+      const icon = slider.querySelector("span");
+      const label = slider.previousElementSibling?.querySelector?.(".pct");
+
+      const setValue = (event) => {
+        const rect = slider.getBoundingClientRect();
+        const pct = Math.round(Math.min(Math.max((event.clientX - rect.left) / rect.width, 0), 1) * 100);
+        slider.style.setProperty("--v", pct + "%");
+        if (label) label.textContent = pct + "%";
+        icon.textContent = pct === 0 ? icons[0] : icons[1 + Math.min(2, Math.floor(pct / 34))];
+        updateScene();
+      };
+
+      slider.addEventListener("pointerdown", (event) => {
+        slider.setPointerCapture(event.pointerId);
+        setValue(event);
+        const move = (e) => setValue(e);
+        const stop = () => {
+          slider.removeEventListener("pointermove", move);
+          slider.removeEventListener("pointerup", stop);
+          slider.removeEventListener("pointercancel", stop);
+        };
+        slider.addEventListener("pointermove", move);
+        slider.addEventListener("pointerup", stop);
+        slider.addEventListener("pointercancel", stop);
+      });
     });
-    document.getElementById("bt-cap").style.display = anyDisconnected ? "" : "none";
-  };
 
-  const activate = (row) => {
-    const pane = row.closest("[data-pane]").dataset.pane;
-    document.querySelectorAll(`#mock [data-pane="${pane}"] .row`).forEach((other) => {
-      other.classList.remove("active");
-      other.querySelector(".check").textContent = "";
+    // --- Tabs (the stage dims its output story while the mic pane is up)
+    document.querySelectorAll("#mock .tab").forEach((tab) => {
+      tab.addEventListener("click", () => {
+        document.querySelectorAll("#mock .tab").forEach((other) => other.classList.remove("active"));
+        tab.classList.add("active");
+        mock.dataset.tab = tab.dataset.tab;
+        stage.dataset.tab = tab.dataset.tab;
+        updateScene();
+      });
     });
-    row.classList.add("active");
-    row.querySelector(".check").textContent = "✓";
-    document.getElementById("dev-name-" + pane).textContent = row.dataset.device;
-  };
 
-  // A disconnect can orphan a pane's selection — fall back to the first
-  // device still present, like the app's auto-switch.
-  const ensureActive = (pane) => {
-    const rows = [...document.querySelectorAll(`#mock [data-pane="${pane}"] .row`)]
-      .filter((row) => row.style.display !== "none");
-    if (!rows.some((row) => row.classList.contains("active")) && rows[0]) activate(rows[0]);
-  };
+    // --- Device rows
+    const activate = (row) => {
+      const pane = row.closest("[data-pane]").dataset.pane;
+      document.querySelectorAll(`#mock [data-pane="${pane}"] .row`).forEach((other) => {
+        other.classList.remove("active");
+        other.querySelector(".check").textContent = "";
+      });
+      row.classList.add("active");
+      row.querySelector(".check").textContent = "✓";
+      document.getElementById("dev-name-" + pane).textContent = row.dataset.device;
+    };
 
-  document.querySelectorAll("#mock [data-pane] .row").forEach((row) => {
-    row.addEventListener("click", () => activate(row));
-  });
+    // A disconnect can orphan a pane's selection — fall back to the first
+    // device still present, like the app's auto-switch.
+    const ensureActive = (pane) => {
+      const rows = [...document.querySelectorAll(`#mock [data-pane="${pane}"] .row`)]
+        .filter((row) => row.style.display !== "none");
+      if (!rows.some((row) => row.classList.contains("active")) && rows[0]) activate(rows[0]);
+    };
 
-  document.querySelectorAll("#mock .row .x").forEach((x) => {
-    x.addEventListener("click", (event) => {
-      event.stopPropagation();
-      btConnected[x.closest(".row").dataset.bt] = false;
-      syncBluetooth();
-
-  const copyButton = document.querySelector(".brew .copy");
-  copyButton.addEventListener("click", () => {
-    navigator.clipboard.writeText("brew install --cask pantafive/tap/fader").then(() => {
-      copyButton.textContent = "Copied";
-      setTimeout(() => { copyButton.textContent = "Copy"; }, 1500);
+    document.querySelectorAll("#mock [data-pane] .row").forEach((row) => {
+      row.addEventListener("click", () => {
+        activate(row);
+        updateScene();
+      });
     });
-  });
-      ensureActive("out");
-      ensureActive("in");
-    });
-  });
 
-  document.querySelectorAll("#mock [data-connect]").forEach((row) => {
-    row.addEventListener("click", () => {
-      const name = row.dataset.connect;
-      if (btConnected[name]) return;
-      row.querySelector(".bt-label").textContent = "connecting…";
-      setTimeout(() => {
-        btConnected[name] = true;
+    // --- Bluetooth, like in the app: connected devices sit in both device
+    // lists, hover shows a disconnect ✕, disconnected ones wait in the shared
+    // BLUETOOTH section and reconnect (routing output there) on click.
+    const syncBluetooth = () => {
+      document.querySelectorAll("#mock [data-bt]").forEach((row) => {
+        row.style.display = btConnected[row.dataset.bt] ? "" : "none";
+      });
+      let anyDisconnected = false;
+      document.querySelectorAll("#mock [data-connect]").forEach((row) => {
+        const connected = btConnected[row.dataset.connect];
+        row.style.display = connected ? "none" : "";
+        if (!connected) {
+          row.querySelector(".bt-label").textContent = row.dataset.connect + " · connect";
+          anyDisconnected = true;
+        }
+      });
+      document.getElementById("bt-cap").style.display = anyDisconnected ? "" : "none";
+    };
+
+    document.querySelectorAll("#mock .row .x").forEach((x) => {
+      x.addEventListener("click", (event) => {
+        event.stopPropagation();
+        btConnected[x.closest(".row").dataset.bt] = false;
         syncBluetooth();
-
-  const copyButton = document.querySelector(".brew .copy");
-  copyButton.addEventListener("click", () => {
-    navigator.clipboard.writeText("brew install --cask pantafive/tap/fader").then(() => {
-      copyButton.textContent = "Copied";
-      setTimeout(() => { copyButton.textContent = "Copy"; }, 1500);
+        ensureActive("out");
+        ensureActive("in");
+        updateScene();
+      });
     });
-  });
-        const target = document.querySelector(`#mock [data-pane="out"] .row[data-bt="${name}"]`);
-        if (target) activate(target);
-      }, 700);
-    });
-  });
 
-  syncBluetooth();
-
-  const copyButton = document.querySelector(".brew .copy");
-  copyButton.addEventListener("click", () => {
-    navigator.clipboard.writeText("brew install --cask pantafive/tap/fader").then(() => {
-      copyButton.textContent = "Copied";
-      setTimeout(() => { copyButton.textContent = "Copy"; }, 1500);
+    document.querySelectorAll("#mock [data-connect]").forEach((row) => {
+      row.addEventListener("click", () => {
+        const name = row.dataset.connect;
+        if (btConnected[name]) return;
+        row.querySelector(".bt-label").textContent = "connecting…";
+        setTimeout(() => {
+          btConnected[name] = true;
+          syncBluetooth();
+          const target = document.querySelector(`#mock [data-pane="out"] .row[data-bt="${name}"]`);
+          if (target) activate(target);
+          updateScene();
+        }, 700);
+      });
     });
-  });
+
+    // --- Device cards are clickable too: switch to it, or connect it first.
+    document.querySelectorAll(".dcard").forEach((card) => {
+      card.addEventListener("click", () => {
+        const name = card.dataset.dev;
+        if (name in btConnected && !btConnected[name]) {
+          card.querySelector(".state").textContent = "Connecting…";
+          document.querySelector(`#mock [data-connect="${name}"]`)?.click();
+          return;
+        }
+        const row = document.querySelector(`#mock [data-pane="out"] .row[data-device="${name}"]`);
+        if (row) activate(row);
+        updateScene();
+      });
+    });
+
+    const copyButton = document.querySelector(".brew .copy");
+    copyButton.addEventListener("click", () => {
+      navigator.clipboard.writeText("brew install --cask pantafive/tap/fader").then(() => {
+        copyButton.textContent = "Copied";
+        setTimeout(() => { copyButton.textContent = "Copy"; }, 1500);
+      });
+    });
+
+    window.addEventListener("resize", drawFlows);
+    syncBluetooth();
+    updateScene();
+  })();
 </script>
 </body>
 </html>
