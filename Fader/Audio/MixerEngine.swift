@@ -30,6 +30,7 @@ final class MixerEngine {
     @ObservationIgnored private var deviceListener: HALListener?
     @ObservationIgnored private var saveTask: Task<Void, Never>?
     @ObservationIgnored private var routingTask: Task<Void, Never>?
+    @ObservationIgnored private var bluetoothRefreshTask: Task<Void, Never>?
 
     func start() {
         volumes = store.load()
@@ -45,6 +46,7 @@ final class MixerEngine {
         }
 
         observeApps()
+        observeDevices()
         syncTaps()
         isStarted = true
     }
@@ -111,6 +113,31 @@ final class MixerEngine {
                 self?.syncTaps()
                 self?.observeApps()
             }
+        }
+    }
+
+    private func observeDevices() {
+        // A HAL device appearing or vanishing usually IS a Bluetooth event;
+        // refresh the paired list so the disconnected section tracks reality.
+        withObservationTracking {
+            _ = deviceMonitor.devices
+        } onChange: { [weak self] in
+            Task { @MainActor in
+                self?.refreshBluetoothSoon()
+                self?.observeDevices()
+            }
+        }
+    }
+
+    /// Twice: once now, once after IOBluetooth's connection state has had a
+    /// moment to settle — it lags the HAL by a beat in both directions.
+    private func refreshBluetoothSoon() {
+        bluetooth.refresh()
+        bluetoothRefreshTask?.cancel()
+        bluetoothRefreshTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .seconds(2))
+            guard !Task.isCancelled else { return }
+            self?.bluetooth.refresh()
         }
     }
 
