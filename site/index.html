@@ -127,6 +127,8 @@
     gap: 44px;
     align-items: center;
     text-align: left;
+    user-select: none;
+    -webkit-user-select: none;
   }
   #flows {
     position: absolute;
@@ -339,7 +341,9 @@
   }
   .mock .row:hover { background: rgba(255, 255, 255, 0.05); }
   .mock .row.dim { color: var(--muted); }
-  .mock .row .chev { font-size: 15px; line-height: 1; }
+  .mock .row .chev { font-size: 15px; line-height: 1; transition: transform 0.2s ease; }
+  .mock .row.open .chev { transform: rotate(90deg); }
+  .mock .fold .row { padding-left: 24px; }
   .mock .row.active { font-weight: 600; }
   .mock .row .check { margin-left: auto; color: var(--accent); }
   .mock .cap {
@@ -422,7 +426,12 @@
           <div class="row" data-device="MacBook Speakers">&#128187; MacBook Speakers<span class="check"></span></div>
           <div class="row" data-device="Studio Display">&#128421; Studio Display<span class="check"></span></div>
           <div class="row" data-device="WH-1000XM5" data-bt="WH-1000XM5">&#127911; WH-1000XM5<span class="x" title="Disconnect">&#10005;</span><span class="check"></span></div>
-          <div class="row dim" title="Wired devices unused for 30 days"><span class="chev">&#8250;</span> Rarely used (3)</div>
+          <div class="row dim" id="rare-toggle" title="Wired devices unused for 30 days"><span class="chev">&#8250;</span> <span>Rarely used (<span id="rare-n">3</span>)</span></div>
+          <div class="fold" id="rare-fold" hidden>
+            <div class="row" data-rare data-device="HomePod">&#128266; HomePod<span class="check"></span></div>
+            <div class="row" data-rare data-device="External Headphones">&#127911; External Headphones<span class="check"></span></div>
+            <div class="row" data-rare data-device="LG UltraFine">&#128421; LG UltraFine<span class="check"></span></div>
+          </div>
         </div>
         <div data-pane="in">
           <div class="head"><span class="label">Input</span><span class="dev" id="dev-name-in">MacBook Microphone</span></div>
@@ -636,13 +645,14 @@
       row.classList.add("active");
       row.querySelector(".check").textContent = "✓";
       document.getElementById("dev-name-" + pane).textContent = row.dataset.device;
+      reconcileRare();
     };
 
     // A disconnect can orphan a pane's selection — fall back to the first
     // device still present, like the app's auto-switch.
     const ensureActive = (pane) => {
       const rows = [...document.querySelectorAll(`#mock [data-pane="${pane}"] .row[data-device]`)]
-        .filter((row) => row.style.display !== "none");
+        .filter((row) => row.style.display !== "none" && !row.closest("[hidden]"));
       if (!rows.some((row) => row.classList.contains("active")) && rows[0]) activate(rows[0]);
     };
 
@@ -712,6 +722,26 @@
         updateScene();
       });
     });
+
+    // --- Rarely used: a disclosure group, like the app's. The app never
+    // folds the current default away — an activated wired device pops out
+    // into the main list and returns to the group once it loses default.
+    const rareToggle = document.getElementById("rare-toggle");
+    const rareFold = document.getElementById("rare-fold");
+    rareToggle.addEventListener("click", () => {
+      rareFold.hidden = !rareFold.hidden;
+      rareToggle.classList.toggle("open", !rareFold.hidden);
+      drawFlows(); // the mock grew or shrank — curves must follow
+    });
+
+    const reconcileRare = () => {
+      document.querySelectorAll("#mock [data-rare]").forEach((row) => {
+        const active = row.classList.contains("active");
+        if (active && row.parentElement === rareFold) rareFold.parentElement.insertBefore(row, rareToggle);
+        if (!active && row.parentElement !== rareFold) rareFold.prepend(row);
+      });
+      document.getElementById("rare-n").textContent = rareFold.querySelectorAll(".row").length;
+    };
 
     const copyButton = document.querySelector(".brew .copy");
     copyButton.addEventListener("click", () => {
