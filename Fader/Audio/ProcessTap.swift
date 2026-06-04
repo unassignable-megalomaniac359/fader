@@ -27,7 +27,7 @@ final class ProcessTap: @unchecked Sendable {
     private var procID: AudioDeviceIOProcID?
     private let ioQueue = DispatchQueue(label: "dev.pantafive.fader.io", qos: .userInteractive)
 
-    let processObjectID: AudioObjectID
+    let processObjectIDs: [AudioObjectID]
 
     var volume: Float {
         get { _volume }
@@ -39,8 +39,8 @@ final class ProcessTap: @unchecked Sendable {
         set { _isMuted = newValue }
     }
 
-    init(processObjectID: AudioObjectID, volume: Float = 1.0, isMuted: Bool = false) {
-        self.processObjectID = processObjectID
+    init(processObjectIDs: [AudioObjectID], volume: Float = 1.0, isMuted: Bool = false) {
+        self.processObjectIDs = processObjectIDs
         _volume = volume
         _isMuted = isMuted
         _currentGain = volume
@@ -51,18 +51,18 @@ final class ProcessTap: @unchecked Sendable {
     func activate(outputDeviceUID: String) throws {
         guard !aggregateID.isValid else { return }
 
-        let description = CATapDescription(stereoMixdownOfProcesses: [processObjectID])
+        let description = CATapDescription(stereoMixdownOfProcesses: processObjectIDs)
         description.uuid = UUID()
         description.muteBehavior = .mutedWhenTapped
         description.isPrivate = true
-        description.name = "Fader tap #\(processObjectID)"
+        description.name = "Fader tap #\(processObjectIDs.first ?? 0)"
 
         var tap = AudioObjectID.unknown
         try checked(AudioHardwareCreateProcessTap(description, &tap), "create process tap")
         tapID = tap
 
         let aggregateDescription: [String: Any] = [
-            kAudioAggregateDeviceNameKey: "Fader aggregate #\(processObjectID)",
+            kAudioAggregateDeviceNameKey: "Fader aggregate #\(processObjectIDs.first ?? 0)",
             kAudioAggregateDeviceUIDKey: UUID().uuidString,
             kAudioAggregateDeviceMainSubDeviceKey: outputDeviceUID,
             kAudioAggregateDeviceClockDeviceKey: outputDeviceUID,
@@ -102,8 +102,9 @@ final class ProcessTap: @unchecked Sendable {
         procID = proc
         try checked(AudioDeviceStart(aggregateID, procID), "start aggregate device")
 
-        let processID = processObjectID
-        Self.logger.info("Tap active for process #\(processID): tap \(tap), aggregate \(aggregate)")
+        let processIDs = processObjectIDs.map(String.init).joined(separator: ",")
+        Self.logger
+            .info("Tap active for processes [\(processIDs, privacy: .public)]: tap \(tap), aggregate \(aggregate)")
     }
 
     /// Tears down in the HAL-required order: stop → IO proc → aggregate → tap.

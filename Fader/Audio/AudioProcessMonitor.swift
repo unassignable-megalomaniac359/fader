@@ -4,7 +4,8 @@ import Observation
 import os
 
 /// Watches the HAL's audio process list and publishes the running apps
-/// that can play sound, joined with AppKit metadata (name, icon).
+/// that can play sound. Helper processes (browser media children, Electron
+/// renderers) group under their responsible application.
 @MainActor
 @Observable
 final class AudioProcessMonitor {
@@ -40,34 +41,44 @@ final class AudioProcessMonitor {
             return
         }
 
-        var nextApps: [AudioApp] = []
+        var groups: [pid_t: (app: NSRunningApplication, objects: [AudioObjectID], playing: Bool)] = [:]
         var nextOutputListeners: [AudioObjectID: HALListener] = [:]
 
         for objectID in objectIDs {
-            guard let pid = try? objectID.readProcessPID(),
-                  let running = NSRunningApplication(processIdentifier: pid),
-                  let bundleID = running.bundleIdentifier,
-                  bundleID != Bundle.main.bundleIdentifier
+            guard let pid = try? objectID.readProcessPID() else { continue }
+
+            // Helper processes answer to the app the user knows; a browser tab's
+            // audio belongs to the browser.
+            let ownerPID = Self.responsiblePID(for: pid)
+            guard let running = NSRunningApplication(processIdentifier: ownerPID)
+                ?? NSRunningApplication(processIdentifier: pid),
+                let bundleID = running.bundleIdentifier,
+                bundleID != Bundle.main.bundleIdentifier
             else { continue }
 
-            // Regular apps always; agents and helpers only while they actually
-            // play — keeps Control Center, Siri, and GPU helpers out of the mixer.
             let isPlaying = objectID.readProcessIsRunningOutput()
-            guard running.activationPolicy == .regular || isPlaying else { continue }
+            let key = running.processIdentifier
+            groups[key, default: (running, [], false)].objects.append(objectID)
+            groups[key]!.playing = groups[key]!.playing || isPlaying
 
-            nextApps.append(AudioApp(
-                id: pid,
-                bundleID: bundleID,
-                name: running.localizedName ?? bundleID,
-                objectID: objectID,
-                isPlaying: isPlaying
-            ))
-
-            // Re-rank rows the moment an app starts or stops playing.
+            // Re-rank rows the moment a process starts or stops playing.
             nextOutputListeners[objectID] = outputListeners[objectID]
                 ?? objectID.listen(kAudioProcessPropertyIsRunningOutput) {
                     Task { @MainActor [weak self] in self?.scheduleRefresh() }
                 }
+        }
+
+        var nextApps = groups.compactMap { pid, group -> AudioApp? in
+            // Regular apps always; agents and helpers only while they actually
+            // play — keeps Control Center, Siri, and GPU helpers out.
+            guard group.app.activationPolicy == .regular || group.playing else { return nil }
+            return AudioApp(
+                id: pid,
+                bundleID: group.app.bundleIdentifier ?? "",
+                name: group.app.localizedName ?? group.app.bundleIdentifier ?? "pid \(pid)",
+                objectIDs: group.objects.sorted(),
+                isPlaying: group.playing
+            )
         }
 
         // Playing apps first, then alphabetical; stable for equal keys.
@@ -77,10 +88,30 @@ final class AudioProcessMonitor {
         }
 
         outputListeners = nextOutputListeners
-        let names = nextApps.map(\.name).joined(separator: ", ")
+        let names = nextApps.map { "\($0.name)\($0.isPlaying ? "*" : "")" }.joined(separator: ", ")
         Self.logger.info("Apps: \(nextApps.count)/\(objectIDs.count) HAL processes — \(names, privacy: .public)")
         if nextApps != apps {
             apps = nextApps
         }
+    }
+
+    // MARK: - Responsible process lookup
+
+    private typealias ResponsiblePIDFunction = @convention(c) (pid_t) -> pid_t
+
+    /// `responsibility_get_pid_responsible_for_pid` maps helper processes to
+    /// the app that spawned them — the same attribution TCC uses. Not in any
+    /// public header, but stable since macOS 10.14 and widely relied upon.
+    private static let responsiblePIDFunction: ResponsiblePIDFunction? = {
+        guard let handle = dlopen(nil, RTLD_NOW),
+              let symbol = dlsym(handle, "responsibility_get_pid_responsible_for_pid")
+        else { return nil }
+        return unsafeBitCast(symbol, to: ResponsiblePIDFunction.self)
+    }()
+
+    private static func responsiblePID(for pid: pid_t) -> pid_t {
+        guard let function = responsiblePIDFunction else { return pid }
+        let owner = function(pid)
+        return owner > 0 ? owner : pid
     }
 }

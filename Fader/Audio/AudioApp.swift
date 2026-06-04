@@ -1,12 +1,14 @@
 import AppKit
 import CoreAudio
 
-/// A running application that the HAL knows as an audio process.
+/// A running application that owns one or more HAL audio processes.
+/// Browsers and Electron apps play audio from helper processes; they group
+/// under the responsible application here.
 struct AudioApp: Identifiable, Hashable {
     let id: pid_t
     let bundleID: String
     let name: String
-    let objectID: AudioObjectID
+    let objectIDs: [AudioObjectID]
     let isPlaying: Bool
 
     /// App icon resolved through NSRunningApplication; cheap, AppKit caches it.

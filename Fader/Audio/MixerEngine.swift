@@ -122,14 +122,23 @@ final class MixerEngine {
         }
     }
 
-    /// Ensures every non-neutral running app has a live tap and every gone app's
-    /// tap is released.
+    /// Ensures every non-neutral running app has a live tap covering its
+    /// current process set, and every gone app's tap is released.
     private func syncTaps() {
         let running = Dictionary(uniqueKeysWithValues: processMonitor.apps.map { ($0.bundleID, $0) })
 
-        for (bundleID, tap) in taps where running[bundleID] == nil {
-            tap.invalidate()
-            taps[bundleID] = nil
+        for (bundleID, tap) in taps {
+            guard let app = running[bundleID] else {
+                tap.invalidate()
+                taps[bundleID] = nil
+                continue
+            }
+            // A browser that spawns a new media child needs the tap rebuilt —
+            // the old one keeps muting only the processes it was born with.
+            if tap.processObjectIDs != app.objectIDs {
+                tap.invalidate()
+                taps[bundleID] = nil
+            }
         }
 
         for (bundleID, entry) in volumes where !entry.isNeutral {
@@ -141,7 +150,7 @@ final class MixerEngine {
     private func createTap(for app: AudioApp, entry: AppVolume) {
         do {
             let outputUID = try AudioObjectID.readDefaultOutputDevice().readDeviceUID()
-            let tap = ProcessTap(processObjectID: app.objectID, volume: entry.volume, isMuted: entry.isMuted)
+            let tap = ProcessTap(processObjectIDs: app.objectIDs, volume: entry.volume, isMuted: entry.isMuted)
             try tap.activate(outputDeviceUID: outputUID)
             taps[app.bundleID] = tap
             needsAudioCapturePermission = false
