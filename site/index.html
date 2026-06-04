@@ -65,58 +65,88 @@
     color: var(--muted);
     margin-top: 12px;
   }
-  /* Popover mockup */
+  /* Popover mockup — mirrors the real Fader popover */
   .mock {
     flex: 0 0 300px;
     background: var(--panel);
     border: 1px solid #262a36;
     border-radius: 16px;
-    padding: 16px;
+    padding: 14px;
     box-shadow: 0 24px 80px rgba(0, 0, 0, 0.5);
     font-size: 13px;
   }
-  .mock .label { font-weight: 600; margin-bottom: 8px; }
+  .mock .head {
+    display: flex;
+    align-items: baseline;
+    margin-bottom: 8px;
+  }
+  .mock .label { font-weight: 600; }
+  .mock .head .dev { margin-left: auto; color: var(--muted); font-size: 12px; }
   .mock .slider {
-    height: 28px;
+    height: 22px;
     background: var(--panel-2);
-    border-radius: 14px;
+    border-radius: 11px;
     position: relative;
-    overflow: hidden;
-    margin-bottom: 14px;
+    margin-bottom: 12px;
   }
   .mock .slider::before {
     content: "";
     position: absolute;
     inset: 0;
-    width: var(--v, 70%);
+    width: max(var(--v, 70%), 22px);
     background: var(--fill);
-    border-radius: 14px;
+    border-radius: 11px;
+  }
+  .mock .slider::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: clamp(0px, calc(var(--v, 70%) - 22px), calc(100% - 22px));
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
   }
   .mock .slider span {
     position: absolute;
-    left: 9px;
-    top: 5px;
+    left: 7px;
+    top: 3px;
     z-index: 1;
-    color: #333;
-    font-size: 12px;
+    color: rgba(0, 0, 0, 0.55);
+    font-size: 11px;
   }
   .mock .row {
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 6px 4px;
+    padding: 5px 4px;
     color: var(--muted);
   }
-  .mock .row.active { color: var(--text); }
+  .mock .row.active { color: var(--text); font-weight: 600; }
   .mock .row .check { margin-left: auto; color: var(--accent); }
+  .mock .cap {
+    color: var(--muted);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    margin: 8px 4px 2px;
+  }
   .mock .app {
     display: flex;
     align-items: center;
     gap: 8px;
-    margin: 10px 4px 4px;
+    margin: 8px 4px 4px;
   }
   .mock .app .pct { margin-left: auto; color: var(--muted); font-variant-numeric: tabular-nums; }
   .mock hr { border: none; border-top: 1px solid #262a36; margin: 10px 0; }
+  .mock .foot {
+    display: flex;
+    align-items: center;
+    color: var(--muted);
+    font-size: 11px;
+  }
+  .mock .foot .gear { margin-left: auto; }
   /* Features */
   .features {
     display: grid;
@@ -151,16 +181,20 @@
       <p class="fineprint">macOS 15+ &middot; Apple silicon &middot; free &amp; open source</p>
     </div>
     <div class="mock" aria-hidden="true">
-      <div class="label">Output</div>
-      <div class="slider" style="--v: 72%"><span>&#128264;</span></div>
-      <div class="row active">&#127911; AirPods Pro <span class="check">&#10003;</span></div>
+      <div class="head"><span class="label">Output</span><span class="dev">AirPods Pro</span></div>
+      <div class="slider" style="--v: 55%"><span>&#128265;</span></div>
       <div class="row">&#128187; MacBook Speakers</div>
+      <div class="row">&#128421; Studio Display</div>
+      <div class="cap">BLUETOOTH</div>
+      <div class="row active">&#127911; AirPods Pro <span class="check">&#10003;</span></div>
       <div class="row">&#127911; WH-1000XM5 &middot; connect</div>
       <hr>
       <div class="app">&#127925; Music <span class="pct">100%</span></div>
       <div class="slider" style="--v: 100%"><span>&#128266;</span></div>
       <div class="app">&#127760; Safari <span class="pct">35%</span></div>
       <div class="slider" style="--v: 35%"><span>&#128265;</span></div>
+      <hr>
+      <div class="foot">Fader 0.1.0 <span class="gear">&#9881;</span></div>
     </div>
   </section>
 
