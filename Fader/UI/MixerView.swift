@@ -112,15 +112,19 @@ struct MixerView: View {
                 Spacer()
             }
         } else {
+            // MenuBarExtra windows size to the content's ideal height, and a
+            // ScrollView's ideal height is zero — give it an explicit one.
+            let rowHeight: CGFloat = 57
+            let apps = engine.processMonitor.apps
             ScrollView {
                 VStack(spacing: 12) {
-                    ForEach(engine.processMonitor.apps) { app in
+                    ForEach(apps) { app in
                         AppRowView(app: app)
                     }
                 }
                 .padding(.vertical, 2)
             }
-            .frame(maxHeight: 420)
+            .frame(height: min(CGFloat(apps.count) * rowHeight, 342))
         }
     }
 }
