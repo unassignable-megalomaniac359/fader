@@ -54,6 +54,19 @@ jobs:
             CODE_SIGN_INJECT_BASE_ENTITLEMENTS=NO \
             -derivedDataPath build build
 
+      # DEPLOYMENT_POSTPROCESSING strip is finicky with the plain `build`
+      # action — verify it actually ran and the signature survived before
+      # spending a notarization round-trip.
+      - name: Verify strip and signature
+        run: |
+          BIN=build/Build/Products/Release/Fader.app/Contents/MacOS/Fader
+          DEFINED=$(nm -U "$BIN" | wc -l | tr -d ' ')
+          if [ "$DEFINED" -gt 5 ]; then
+            echo "Binary not stripped: $DEFINED defined symbols" >&2
+            exit 1
+          fi
+          codesign --verify --strict build/Build/Products/Release/Fader.app
+
       - name: Notarize and package
         env:
           APPLE_ID: ${{ secrets.APPLE_ID }}
@@ -83,6 +96,11 @@ jobs:
           xcrun stapler staple "dist/Fader.dmg"
           cp "dist/Fader.dmg" "dist/Fader-$VERSION.dmg"
 
+          # The shipped binary is stripped; the dSYM is the only way to
+          # symbolicate user crash logs. Publish it next to the dmg.
+          ditto -c -k --keepParent build/Build/Products/Release/Fader.app.dSYM \
+            "dist/Fader-$VERSION-dSYM.zip"
+
       - name: Create GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -94,5 +112,5 @@ jobs:
               --title "Fader $VERSION" --generate-notes --draft
           fi
           gh release upload "$GITHUB_REF_NAME" \
-            "dist/Fader.dmg" "dist/Fader-$VERSION.dmg" --clobber
+            "dist/Fader.dmg" "dist/Fader-$VERSION.dmg" "dist/Fader-$VERSION-dSYM.zip" --clobber
           gh release edit "$GITHUB_REF_NAME" --draft=false

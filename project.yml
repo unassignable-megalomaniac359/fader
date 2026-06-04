@@ -14,6 +14,15 @@ settings:
     CODE_SIGN_STYLE: Automatic
     ENABLE_HARDENED_RUNTIME: true
     DEAD_CODE_STRIPPING: true
+  configs:
+    Release:
+      # Size-tuned: the only hot path is trivial float math in the IO proc,
+      # -Osize costs it nothing. Strip runs inside xcodebuild before signing;
+      # release.yml verifies the symbol table is actually gone.
+      SWIFT_OPTIMIZATION_LEVEL: -Osize
+      DEPLOYMENT_POSTPROCESSING: true
+      STRIP_INSTALLED_PRODUCT: true
+      STRIP_STYLE: all
 
 targets:
   Fader:

@@ -28,7 +28,9 @@ final class AudioProcessMonitor {
         // flags of a few dozen process objects costs microseconds.
         pollTask = Task { @MainActor [weak self] in
             while !Task.isCancelled {
-                try? await Task.sleep(for: .seconds(2))
+                // Generous tolerance lets the kernel coalesce the wakeup with
+                // other timers — playing-state freshness doesn't need precision.
+                try? await Task.sleep(for: .seconds(2), tolerance: .milliseconds(500))
                 self?.refresh()
             }
         }
