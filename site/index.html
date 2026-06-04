@@ -240,10 +240,10 @@
   /* Popover mockup — mirrors the real Fader popover */
   .mock {
     width: min(420px, 100%);
-    background: var(--panel);
-    border: 1px solid #262a36;
-    border-radius: 18px;
-    padding: 16px;
+    background: #121215;
+    border: 1px solid #26262b;
+    border-radius: 16px;
+    padding: 14px;
     box-shadow: 0 24px 80px rgba(0, 0, 0, 0.5);
     font-size: 14px;
     position: relative;
@@ -251,7 +251,7 @@
   }
   .mock .tabs {
     display: flex;
-    background: var(--panel-2);
+    background: #1d1d21;
     border-radius: 8px;
     padding: 2px;
     margin-bottom: 12px;
@@ -267,7 +267,7 @@
     cursor: pointer;
   }
   .mock .tab.active {
-    background: rgba(255, 255, 255, 0.12);
+    background: #3a3a3f;
     color: var(--text);
   }
   .mock[data-tab="out"] [data-pane="in"],
@@ -293,7 +293,7 @@
   .mock .head .dev { margin-left: auto; color: var(--muted); font-size: 12px; }
   .mock .slider {
     height: 22px;
-    background: var(--panel-2);
+    background: #232328;
     border-radius: 11px;
     position: relative;
     margin-bottom: 12px;
@@ -333,12 +333,14 @@
     align-items: center;
     gap: 8px;
     padding: 5px 6px;
-    color: var(--muted);
+    color: var(--text);
     cursor: pointer;
     border-radius: 6px;
   }
   .mock .row:hover { background: rgba(255, 255, 255, 0.05); }
-  .mock .row.active { color: var(--text); font-weight: 600; }
+  .mock .row.dim { color: var(--muted); }
+  .mock .row .chev { font-size: 15px; line-height: 1; }
+  .mock .row.active { font-weight: 600; }
   .mock .row .check { margin-left: auto; color: var(--accent); }
   .mock .cap {
     color: var(--muted);
@@ -351,17 +353,11 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    margin: 8px 4px 4px;
+    margin: 8px 4px 6px;
+    font-weight: 600;
   }
-  .mock .app .pct { margin-left: auto; color: var(--muted); font-variant-numeric: tabular-nums; }
-  .mock hr { border: none; border-top: 1px solid #262a36; margin: 10px 0; }
-  .mock .foot {
-    display: flex;
-    align-items: center;
-    color: var(--muted);
-    font-size: 11px;
-  }
-  .mock .foot .gear { margin-left: auto; }
+  .mock .app .pct { margin-left: auto; color: var(--muted); font-weight: 400; font-variant-numeric: tabular-nums; }
+  .mock hr { border: none; border-top: 1px solid #242428; margin: 10px 0; }
   /* About — plain prose instead of feature cards */
   .about {
     max-width: 620px;
@@ -403,12 +399,12 @@
       </svg>
       <div class="side side-apps" aria-hidden="true">
         <div class="cap2">NOW PLAYING</div>
-        <div class="scard" data-app-card="music" style="--amp: 1">
+        <div class="scard" data-app-card="music" style="--amp: 0.55">
           <span>&#127925;</span>
           <span class="meta"><span class="name">Music</span><span class="sub apct">100%</span></span>
           <span class="eq"><i></i><i></i><i></i><i></i><i></i></span>
         </div>
-        <div class="scard" data-app-card="safari" style="--amp: 0.35">
+        <div class="scard" data-app-card="safari" style="--amp: 0.19">
           <span>&#127760;</span>
           <span class="meta"><span class="name">Safari</span><span class="sub apct">35%</span></span>
           <span class="eq"><i></i><i></i><i></i><i></i><i></i></span>
@@ -421,11 +417,12 @@
         </div>
         <div data-pane="out">
           <div class="head"><span class="label">Output</span><span class="dev" id="dev-name-out">AirPods Pro</span></div>
-          <div class="slider" data-master="out" style="--v: 55%"><span>&#128265;</span></div>
+          <div class="slider" data-master="out" data-vol-icon style="--v: 55%"><span>&#128265;</span></div>
           <div class="row active" data-device="AirPods Pro" data-bt="AirPods Pro">&#127911; AirPods Pro<span class="x" title="Disconnect">&#10005;</span><span class="check">&#10003;</span></div>
           <div class="row" data-device="MacBook Speakers">&#128187; MacBook Speakers<span class="check"></span></div>
           <div class="row" data-device="Studio Display">&#128421; Studio Display<span class="check"></span></div>
           <div class="row" data-device="WH-1000XM5" data-bt="WH-1000XM5">&#127911; WH-1000XM5<span class="x" title="Disconnect">&#10005;</span><span class="check"></span></div>
+          <div class="row dim" title="Wired devices unused for 30 days"><span class="chev">&#8250;</span> Rarely used (3)</div>
         </div>
         <div data-pane="in">
           <div class="head"><span class="label">Input</span><span class="dev" id="dev-name-in">MacBook Microphone</span></div>
@@ -435,21 +432,19 @@
           <div class="row" data-device="WH-1000XM5" data-bt="WH-1000XM5">&#127911; WH-1000XM5<span class="x" title="Disconnect">&#10005;</span><span class="check"></span></div>
         </div>
         <div class="cap" id="bt-cap">BLUETOOTH</div>
-        <div class="row" data-connect="AirPods Pro">&#127911; <span class="bt-label">AirPods Pro &middot; connect</span><span class="check"></span></div>
-        <div class="row" data-connect="WH-1000XM5">&#127911; <span class="bt-label">WH-1000XM5 &middot; connect</span><span class="check"></span></div>
+        <div class="row dim" data-connect="AirPods Pro">&#127911; <span class="bt-label">AirPods Pro &middot; connect</span><span class="check"></span></div>
+        <div class="row dim" data-connect="WH-1000XM5">&#127911; <span class="bt-label">WH-1000XM5 &middot; connect</span><span class="check"></span></div>
         <hr>
         <div data-pane="out">
           <div class="app">&#127925; Music <span class="pct">100%</span></div>
-          <div class="slider" data-app="music" style="--v: 100%"><span>&#128266;</span></div>
+          <div class="slider" data-app="music" data-vol-icon style="--v: 100%"><span>&#128266;</span></div>
           <div class="app">&#127760; Safari <span class="pct">35%</span></div>
-          <div class="slider" data-app="safari" style="--v: 35%"><span>&#128265;</span></div>
+          <div class="slider" data-app="safari" data-vol-icon style="--v: 35%"><span>&#128265;</span></div>
         </div>
         <div data-pane="in">
           <div class="app">&#128249; Zoom <span class="rec">&#9679;</span></div>
           <div class="app">&#127909; QuickTime Player <span class="rec">&#9679;</span></div>
         </div>
-        <hr>
-        <div class="foot">Fader <span class="gear">&#9881;</span></div>
       </div>
       <div class="side" aria-hidden="true">
         <div class="cap2">DEVICES</div>
@@ -506,7 +501,6 @@
   (() => {
     const stage = document.getElementById("stage");
     const mock = document.getElementById("mock");
-    const icons = ["\u{1F507}", "\u{1F508}", "\u{1F509}", "\u{1F50A}"];
     const btConnected = { "AirPods Pro": true, "WH-1000XM5": false };
 
     const appSliders = {
@@ -518,6 +512,7 @@
     // What you'd hear: the app's fader scaled by the master output volume.
     const heardVolume = (slider) => (volumeOf(slider) * volumeOf(masterSlider)) / 100;
     const activeOutRow = () => document.querySelector('#mock [data-pane="out"] .row.active');
+    const icons = ["\u{1F507}", "\u{1F508}", "\u{1F509}", "\u{1F50A}"];
 
     // --- Flow curves: app card → its slider in the mock, active row → device card.
     const flowPaths = {};
@@ -601,7 +596,7 @@
         const pct = Math.round(Math.min(Math.max((event.clientX - rect.left) / rect.width, 0), 1) * 100);
         slider.style.setProperty("--v", pct + "%");
         if (label) label.textContent = pct + "%";
-        icon.textContent = pct === 0 ? icons[0] : icons[1 + Math.min(2, Math.floor(pct / 34))];
+        if (slider.hasAttribute("data-vol-icon")) icon.textContent = pct === 0 ? icons[0] : icons[1 + Math.min(2, Math.floor(pct / 34))];
         updateScene();
       };
 
@@ -634,7 +629,7 @@
     // --- Device rows
     const activate = (row) => {
       const pane = row.closest("[data-pane]").dataset.pane;
-      document.querySelectorAll(`#mock [data-pane="${pane}"] .row`).forEach((other) => {
+      document.querySelectorAll(`#mock [data-pane="${pane}"] .row[data-device]`).forEach((other) => {
         other.classList.remove("active");
         other.querySelector(".check").textContent = "";
       });
@@ -646,12 +641,12 @@
     // A disconnect can orphan a pane's selection — fall back to the first
     // device still present, like the app's auto-switch.
     const ensureActive = (pane) => {
-      const rows = [...document.querySelectorAll(`#mock [data-pane="${pane}"] .row`)]
+      const rows = [...document.querySelectorAll(`#mock [data-pane="${pane}"] .row[data-device]`)]
         .filter((row) => row.style.display !== "none");
       if (!rows.some((row) => row.classList.contains("active")) && rows[0]) activate(rows[0]);
     };
 
-    document.querySelectorAll("#mock [data-pane] .row").forEach((row) => {
+    document.querySelectorAll("#mock [data-pane] .row[data-device]").forEach((row) => {
       row.addEventListener("click", () => {
         activate(row);
         updateScene();
