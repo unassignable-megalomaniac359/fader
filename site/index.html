@@ -4,21 +4,21 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Fader — volume control for your Mac menu bar</title>
-<meta name="description" content="Per-app volume and one-click audio output switching for macOS. Free, native, no telemetry.">
+<meta name="description" content="Per-app volume, one-click output switching, and microphone control for macOS. Free, native, no telemetry.">
 <link rel="canonical" href="https://fader.pantafive.dev/">
 <link rel="icon" type="image/png" href="/icon.png">
 <meta name="theme-color" content="#0d0e12">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Fader">
 <meta property="og:title" content="Fader — volume control for your Mac menu bar">
-<meta property="og:description" content="Per-app volume and one-click audio output switching for macOS. Free, native, no telemetry.">
+<meta property="og:description" content="Per-app volume, one-click output switching, and microphone control for macOS. Free, native, no telemetry.">
 <meta property="og:url" content="https://fader.pantafive.dev/">
 <meta property="og:image" content="https://fader.pantafive.dev/og.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Fader — volume control for your Mac menu bar">
-<meta name="twitter:description" content="Per-app volume and one-click audio output switching for macOS. Free, native, no telemetry.">
+<meta name="twitter:description" content="Per-app volume, one-click output switching, and microphone control for macOS. Free, native, no telemetry.">
 <meta name="twitter:image" content="https://fader.pantafive.dev/og.png">
 <style>
   :root {
@@ -107,6 +107,41 @@
     box-shadow: 0 24px 80px rgba(0, 0, 0, 0.5);
     font-size: 13px;
   }
+  .mock .tabs {
+    display: flex;
+    background: var(--panel-2);
+    border-radius: 8px;
+    padding: 2px;
+    margin-bottom: 12px;
+  }
+  .mock .tab {
+    flex: 1;
+    border: none;
+    background: transparent;
+    color: var(--muted);
+    font-size: 13px;
+    padding: 4px 0;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+  .mock .tab.active {
+    background: rgba(255, 255, 255, 0.12);
+    color: var(--text);
+  }
+  .mock[data-tab="out"] [data-pane="in"],
+  .mock[data-tab="in"] [data-pane="out"] { display: none; }
+  .mock .rec {
+    margin-left: auto;
+    color: #ff9f0a;
+  }
+  .mock .row .x {
+    display: none;
+    margin-left: auto;
+    color: var(--muted);
+    font-size: 11px;
+  }
+  .mock .row[data-bt]:hover .x { display: inline; }
+  .mock .row[data-bt]:hover .check { display: none; }
   .mock .head {
     display: flex;
     align-items: baseline;
@@ -219,19 +254,40 @@
       <div><span class="brew">brew install --cask pantafive/tap/fader</span></div>
       <p class="fineprint">macOS 15+ &middot; Apple silicon &middot; free &amp; open source</p>
     </div>
-    <div class="mock" id="mock">
-      <div class="head"><span class="label">Output</span><span class="dev" id="dev-name">AirPods Pro</span></div>
-      <div class="slider" style="--v: 55%"><span>&#128265;</span></div>
-      <div class="row" data-device="MacBook Speakers">&#128187; MacBook Speakers<span class="check"></span></div>
-      <div class="row" data-device="Studio Display">&#128421; Studio Display<span class="check"></span></div>
-      <div class="cap">BLUETOOTH</div>
-      <div class="row active" data-device="AirPods Pro">&#127911; AirPods Pro<span class="check">&#10003;</span></div>
-      <div class="row" data-device="WH-1000XM5" data-connect="1">&#127911; <span class="bt-label">WH-1000XM5 &middot; connect</span><span class="check"></span></div>
+    <div class="mock" id="mock" data-tab="out">
+      <div class="tabs">
+        <button class="tab active" data-tab="out" aria-label="Output">&#128266;</button>
+        <button class="tab" data-tab="in" aria-label="Microphone">&#127908;</button>
+      </div>
+      <div data-pane="out">
+        <div class="head"><span class="label">Output</span><span class="dev" id="dev-name-out">AirPods Pro</span></div>
+        <div class="slider" style="--v: 55%"><span>&#128265;</span></div>
+        <div class="row active" data-device="AirPods Pro" data-bt="AirPods Pro">&#127911; AirPods Pro<span class="x" title="Disconnect">&#10005;</span><span class="check">&#10003;</span></div>
+        <div class="row" data-device="MacBook Speakers">&#128187; MacBook Speakers<span class="check"></span></div>
+        <div class="row" data-device="Studio Display">&#128421; Studio Display<span class="check"></span></div>
+        <div class="row" data-device="WH-1000XM5" data-bt="WH-1000XM5">&#127911; WH-1000XM5<span class="x" title="Disconnect">&#10005;</span><span class="check"></span></div>
+      </div>
+      <div data-pane="in">
+        <div class="head"><span class="label">Input</span><span class="dev" id="dev-name-in">MacBook Microphone</span></div>
+        <div class="slider" style="--v: 70%"><span>&#127908;</span></div>
+        <div class="row active" data-device="MacBook Microphone">&#128187; MacBook Microphone<span class="check">&#10003;</span></div>
+        <div class="row" data-device="AirPods Pro" data-bt="AirPods Pro">&#127911; AirPods Pro<span class="x" title="Disconnect">&#10005;</span><span class="check"></span></div>
+        <div class="row" data-device="WH-1000XM5" data-bt="WH-1000XM5">&#127911; WH-1000XM5<span class="x" title="Disconnect">&#10005;</span><span class="check"></span></div>
+      </div>
+      <div class="cap" id="bt-cap">BLUETOOTH</div>
+      <div class="row" data-connect="AirPods Pro">&#127911; <span class="bt-label">AirPods Pro &middot; connect</span><span class="check"></span></div>
+      <div class="row" data-connect="WH-1000XM5">&#127911; <span class="bt-label">WH-1000XM5 &middot; connect</span><span class="check"></span></div>
       <hr>
-      <div class="app">&#127925; Music <span class="pct">100%</span></div>
-      <div class="slider" style="--v: 100%"><span>&#128266;</span></div>
-      <div class="app">&#127760; Safari <span class="pct">35%</span></div>
-      <div class="slider" style="--v: 35%"><span>&#128265;</span></div>
+      <div data-pane="out">
+        <div class="app">&#127925; Music <span class="pct">100%</span></div>
+        <div class="slider" style="--v: 100%"><span>&#128266;</span></div>
+        <div class="app">&#127760; Safari <span class="pct">35%</span></div>
+        <div class="slider" style="--v: 35%"><span>&#128265;</span></div>
+      </div>
+      <div data-pane="in">
+        <div class="app">&#128249; Zoom <span class="rec">&#9679;</span></div>
+        <div class="app">&#127909; QuickTime Player <span class="rec">&#9679;</span></div>
+      </div>
       <hr>
       <div class="foot">Fader <span class="gear">&#9881;</span></div>
     </div>
@@ -249,6 +305,10 @@
     <div class="card">
       <h3>A fader for every app</h3>
       <p>Tame a loud browser without touching your music. Volumes persist per app across launches.</p>
+    </div>
+    <div class="card">
+      <h3>Microphones too</h3>
+      <p>The mic tab switches inputs, sets the gain, and shows which apps are listening right now.</p>
     </div>
     <div class="card">
       <h3>Native and lightweight</h3>
@@ -296,31 +356,83 @@
     });
   });
 
-  document.querySelectorAll("#mock .row").forEach((row) => {
-    row.addEventListener("click", () => {
-      const activate = () => {
-        document.querySelectorAll("#mock .row").forEach((other) => {
-          other.classList.remove("active");
-          other.querySelector(".check").textContent = "";
-        });
-        row.classList.add("active");
-        row.querySelector(".check").textContent = "✓";
-        document.getElementById("dev-name").textContent = row.dataset.device;
-      };
-
-      const btLabel = row.querySelector(".bt-label");
-      if (row.dataset.connect && btLabel) {
-        btLabel.textContent = "connecting…";
-        setTimeout(() => {
-          btLabel.textContent = row.dataset.device;
-          delete row.dataset.connect;
-          activate();
-        }, 700);
-      } else {
-        activate();
-      }
+  document.querySelectorAll("#mock .tab").forEach((tab) => {
+    tab.addEventListener("click", () => {
+      document.querySelectorAll("#mock .tab").forEach((other) => other.classList.remove("active"));
+      tab.classList.add("active");
+      document.getElementById("mock").dataset.tab = tab.dataset.tab;
     });
   });
+
+  // Bluetooth, like in the app: connected devices sit in both device lists,
+  // hover shows a disconnect ✕, disconnected ones wait in the shared
+  // BLUETOOTH section and reconnect (routing output there) on click.
+  const btConnected = { "AirPods Pro": true, "WH-1000XM5": false };
+
+  const syncBluetooth = () => {
+    document.querySelectorAll("#mock [data-bt]").forEach((row) => {
+      row.style.display = btConnected[row.dataset.bt] ? "" : "none";
+    });
+    let anyDisconnected = false;
+    document.querySelectorAll("#mock [data-connect]").forEach((row) => {
+      const connected = btConnected[row.dataset.connect];
+      row.style.display = connected ? "none" : "";
+      if (!connected) {
+        row.querySelector(".bt-label").textContent = row.dataset.connect + " · connect";
+        anyDisconnected = true;
+      }
+    });
+    document.getElementById("bt-cap").style.display = anyDisconnected ? "" : "none";
+  };
+
+  const activate = (row) => {
+    const pane = row.closest("[data-pane]").dataset.pane;
+    document.querySelectorAll(`#mock [data-pane="${pane}"] .row`).forEach((other) => {
+      other.classList.remove("active");
+      other.querySelector(".check").textContent = "";
+    });
+    row.classList.add("active");
+    row.querySelector(".check").textContent = "✓";
+    document.getElementById("dev-name-" + pane).textContent = row.dataset.device;
+  };
+
+  // A disconnect can orphan a pane's selection — fall back to the first
+  // device still present, like the app's auto-switch.
+  const ensureActive = (pane) => {
+    const rows = [...document.querySelectorAll(`#mock [data-pane="${pane}"] .row`)]
+      .filter((row) => row.style.display !== "none");
+    if (!rows.some((row) => row.classList.contains("active")) && rows[0]) activate(rows[0]);
+  };
+
+  document.querySelectorAll("#mock [data-pane] .row").forEach((row) => {
+    row.addEventListener("click", () => activate(row));
+  });
+
+  document.querySelectorAll("#mock .row .x").forEach((x) => {
+    x.addEventListener("click", (event) => {
+      event.stopPropagation();
+      btConnected[x.closest(".row").dataset.bt] = false;
+      syncBluetooth();
+      ensureActive("out");
+      ensureActive("in");
+    });
+  });
+
+  document.querySelectorAll("#mock [data-connect]").forEach((row) => {
+    row.addEventListener("click", () => {
+      const name = row.dataset.connect;
+      if (btConnected[name]) return;
+      row.querySelector(".bt-label").textContent = "connecting…";
+      setTimeout(() => {
+        btConnected[name] = true;
+        syncBluetooth();
+        const target = document.querySelector(`#mock [data-pane="out"] .row[data-bt="${name}"]`);
+        if (target) activate(target);
+      }, 700);
+    });
+  });
+
+  syncBluetooth();
 </script>
 </body>
 </html>
