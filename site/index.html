@@ -65,6 +65,23 @@
     color: var(--muted);
     margin-top: 12px;
   }
+  .brew {
+    display: inline-block;
+    margin-top: 16px;
+    padding: 10px 16px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid #262a36;
+    border-radius: 10px;
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 13px;
+    color: var(--text);
+    user-select: all;
+  }
+  .brew::before {
+    content: "$ ";
+    color: var(--muted);
+    user-select: none;
+  }
   /* Popover mockup — mirrors the real Fader popover */
   .mock {
     flex: 0 0 300px;
@@ -178,7 +195,8 @@
       <h1>Fader</h1>
       <p class="tagline">Per-app volume and one-click audio output switching, right in your Mac&nbsp;menu&nbsp;bar.</p>
       <a class="download" href="https://github.com/pantafive/fader/releases/latest/download/Fader.dmg">Download for macOS</a>
-      <p class="fineprint">macOS 15+ &middot; Apple silicon &middot; free &amp; open source &middot; or <code>brew install --cask pantafive/tap/fader</code></p>
+      <div><span class="brew">brew install --cask pantafive/tap/fader</span></div>
+      <p class="fineprint">macOS 15+ &middot; Apple silicon &middot; free &amp; open source</p>
     </div>
     <div class="mock" aria-hidden="true">
       <div class="head"><span class="label">Output</span><span class="dev">AirPods Pro</span></div>
