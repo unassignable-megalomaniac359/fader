@@ -53,9 +53,17 @@ final class AudioDeviceMonitor {
     // the main list and the rarely-used group.
     @ObservationIgnored private var lastUsed: [String: Date] = [:]
     @ObservationIgnored private let usageStore = DeviceUsageStore()
+    // Not observed: every priority change re-sorts `devices`, which is.
+    @ObservationIgnored private var priority: [String] = []
+    @ObservationIgnored private let priorityStore = DevicePriorityStore()
+    /// Auto-switch needs a populated baseline — at startup every device
+    /// "appears" at once and none of that is a hotplug event.
+    @ObservationIgnored private var hasBaseline = false
+    @ObservationIgnored private var lastDefaultUID: String?
 
     func start() {
         lastUsed = usageStore.load()
+        priority = priorityStore.load()
         listeners = [
             AudioObjectID.system.listen(kAudioHardwarePropertyDevices) {
                 Task { @MainActor [weak self] in self?.refresh() }
@@ -79,13 +87,32 @@ final class AudioDeviceMonitor {
     /// True when the device hasn't been the default output within the
     /// retention window. The current default is always "in use" regardless of
     /// its stamp — a fresh switch stamps asynchronously, on the next refresh.
+    /// Bluetooth is exempt: a connected headset is a deliberate act, and the
+    /// disconnected list already lives in its own section.
     func isRarelyUsed(_ device: AudioDevice) -> Bool {
-        device.id != defaultDeviceID && !DeviceUsageStore.isRecent(lastUsed[device.uid])
+        !device.isBluetooth && device.id != defaultDeviceID && !DeviceUsageStore.isRecent(lastUsed[device.uid])
+    }
+
+    /// Persists the new order of the visible rows as the device priority and
+    /// re-sorts the list. Hidden devices keep their rank (see merge).
+    func applyOrder(_ visibleUIDs: [String]) {
+        priority = DevicePriorityStore.merge(stored: priority, visible: visibleUIDs)
+        priorityStore.save(priority)
+        devices = sorted(devices)
+    }
+
+    /// Manual demotion to the rarely-used group: forget the usage stamp.
+    /// Using the device again (or auto-switching to it) promotes it back.
+    func markRarelyUsed(_ device: AudioDevice) {
+        guard device.id != defaultDeviceID, !device.isBluetooth else { return }
+        lastUsed[device.uid] = nil
+        usageStore.save(lastUsed)
     }
 
     func refresh() {
         defaultDeviceID = (try? AudioObjectID.readDefaultOutputDevice()) ?? .unknown
-        stampDefaultDevice()
+        let defaultUID = try? defaultDeviceID.readDeviceUID()
+        stampDefaultDevice(uid: defaultUID)
 
         guard let ids = try? AudioObjectID.system.readArray(kAudioHardwarePropertyDevices, of: AudioDeviceID.self)
         else {
@@ -93,7 +120,8 @@ final class AudioDeviceMonitor {
             return
         }
 
-        devices = ids.compactMap { id in
+        let previousUIDs = Set(devices.map(\.uid))
+        devices = sorted(ids.compactMap { id in
             guard id.outputChannelCount() > 0,
                   let uid = try? id.readDeviceUID(),
                   let name = try? id.readString(kAudioObjectPropertyName)
@@ -104,14 +132,61 @@ final class AudioDeviceMonitor {
             // not user choices.
             guard transport != kAudioDeviceTransportTypeAggregate || !name.hasPrefix("Fader") else { return nil }
             return AudioDevice(id: id, uid: uid, name: name, transport: transport)
+        })
+
+        autoSwitch(previousUIDs: previousUIDs, defaultUID: defaultUID)
+        lastDefaultUID = defaultUID
+        hasBaseline = true
+    }
+
+    // MARK: - Priority
+
+    private func rank(_ uid: String) -> Int {
+        priority.firstIndex(of: uid) ?? Int.max
+    }
+
+    /// Ranked devices in priority order first, unranked after, alphabetical
+    /// within equal rank.
+    private func sorted(_ list: [AudioDevice]) -> [AudioDevice] {
+        list.sorted {
+            let lhs = rank($0.uid)
+            let rhs = rank($1.uid)
+            if lhs != rhs { return lhs < rhs }
+            return $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
         }
-        .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+    }
+
+    /// Priority-driven default switching, gated to explicit events so it
+    /// never fights a manual choice:
+    /// - exactly one ranked device appeared (hotplug, not a wake storm) and
+    ///   it outranks the current default → switch to it;
+    /// - the previous default disappeared → override macOS's fallback with
+    ///   the best-ranked device still present.
+    private func autoSwitch(previousUIDs: Set<String>, defaultUID: String?) {
+        guard hasBaseline else { return }
+
+        if let previous = lastDefaultUID, previousUIDs.contains(previous),
+           !devices.contains(where: { $0.uid == previous }) {
+            if let fallback = devices.filter({ rank($0.uid) != Int.max }).min(by: { rank($0.uid) < rank($1.uid) }),
+               fallback.uid != defaultUID {
+                Self.logger.info("Default output disappeared; switching to \(fallback.name)")
+                setDefault(fallback)
+            }
+            return
+        }
+
+        let appeared = devices.filter { !previousUIDs.contains($0.uid) && rank($0.uid) != Int.max }
+        guard appeared.count == 1, let candidate = appeared.first, let defaultUID,
+              rank(candidate.uid) < rank(defaultUID)
+        else { return }
+        Self.logger.info("Higher-priority device connected; switching to \(candidate.name)")
+        setDefault(candidate)
     }
 
     /// Records that the current default output is in use. Writes are throttled
     /// to one per hour per device — ample granularity for a 30-day window.
-    private func stampDefaultDevice(now: Date = Date()) {
-        guard defaultDeviceID != .unknown, let uid = try? defaultDeviceID.readDeviceUID() else { return }
+    private func stampDefaultDevice(uid: String?, now: Date = Date()) {
+        guard let uid else { return }
         if let stamp = lastUsed[uid], now.timeIntervalSince(stamp) < 3600 { return }
         lastUsed[uid] = now
         usageStore.save(lastUsed, now: now)

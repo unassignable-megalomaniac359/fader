@@ -2,15 +2,35 @@ import SwiftUI
 
 /// One output device: transport icon, name, checkmark on the active one.
 /// Clicking switches the system default output. Bluetooth devices get a
-/// disconnect button on hover.
+/// disconnect button on hover. With a `reorder` handler the whole row drags
+/// to reorder — the native drag session never starts inside a MenuBarExtra
+/// window, so this is a plain DragGesture; a 6pt threshold keeps clicks
+/// distinct from grabs.
 struct DeviceRowView: View {
+    /// Vertical rhythm of the device list; MixerView's drag math relies on it.
+    static let rowHeight: CGFloat = 28
+
+    enum ReorderEvent {
+        case moved(CGFloat)
+        case finished
+    }
+
     @Environment(MixerEngine.self) private var engine
     let device: AudioDevice
+    var reorder: ((ReorderEvent) -> Void)?
+    /// True while a *different* row is being dragged: rows sliding past the
+    /// cursor must not flash their hover chrome.
+    var suppressHover: Bool = false
 
     @State private var isHovering = false
+    @State private var isDraggingRow = false
 
     private var isActive: Bool {
         engine.deviceMonitor.defaultDeviceID == device.id
+    }
+
+    private var showsHover: Bool {
+        (isHovering && !suppressHover) || isDraggingRow
     }
 
     private var bluetoothPeer: BluetoothAudioDevice? {
@@ -18,52 +38,69 @@ struct DeviceRowView: View {
     }
 
     var body: some View {
-        Button {
-            engine.deviceMonitor.setDefault(device)
-        } label: {
-            HStack(spacing: 8) {
-                Image(systemName: device.symbolName)
-                    .font(.system(size: 13))
-                    .foregroundStyle(isActive ? Color.accentColor : .secondary)
-                    .frame(width: 18)
-                Text(device.name)
-                    .font(.system(size: 12, weight: isActive ? .semibold : .regular))
-                    .lineLimit(1)
-                Spacer()
-                if let peer = bluetoothPeer, isHovering {
-                    Button {
-                        engine.bluetooth.disconnect(peer)
-                    } label: {
-                        Image(systemName: "xmark.circle.fill")
-                            .font(.system(size: 12))
-                            .foregroundStyle(.tertiary)
-                    }
-                    .buttonStyle(.plain)
-                    .help("Disconnect")
-                } else if isActive {
-                    Image(systemName: "checkmark")
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(Color.accentColor)
+        HStack(spacing: 8) {
+            Image(systemName: device.symbolName)
+                .font(.system(size: 13))
+                .foregroundStyle(isActive ? Color.accentColor : .secondary)
+                .frame(width: 18)
+            Text(device.name)
+                .font(.system(size: 12, weight: isActive ? .semibold : .regular))
+                .lineLimit(1)
+            Spacer()
+            if let peer = bluetoothPeer, showsHover {
+                Button {
+                    engine.bluetooth.disconnect(peer)
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 12))
+                        .foregroundStyle(.tertiary)
                 }
+                .buttonStyle(.plain)
+                .help("Disconnect")
+            } else if isActive {
+                Image(systemName: "checkmark")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(Color.accentColor)
             }
-            .padding(.horizontal, 8)
-            .padding(.vertical, 6)
-            .contentShape(RoundedRectangle(cornerRadius: 6))
-            .background(
-                isHovering ? AnyShapeStyle(.quaternary.opacity(0.6)) : AnyShapeStyle(.clear),
-                in: RoundedRectangle(cornerRadius: 6)
-            )
         }
-        .buttonStyle(.plain)
+        .padding(.horizontal, 8)
+        .frame(height: Self.rowHeight)
+        .contentShape(RoundedRectangle(cornerRadius: 6))
+        .background(
+            showsHover ? AnyShapeStyle(.quaternary.opacity(0.6)) : AnyShapeStyle(.clear),
+            in: RoundedRectangle(cornerRadius: 6)
+        )
         .onHover { isHovering = $0 }
+        .onTapGesture {
+            engine.deviceMonitor.setDefault(device)
+        }
+        .gesture(reorderGesture)
+    }
+
+    private var reorderGesture: some Gesture {
+        // Global space: the row itself moves by the reported translation, so
+        // measuring in its local space feeds the offset back into the gesture
+        // and the row vibrates.
+        DragGesture(minimumDistance: 6, coordinateSpace: .global)
+            .onChanged { gesture in
+                guard reorder != nil else { return }
+                isDraggingRow = true
+                reorder?(.moved(gesture.translation.height))
+            }
+            .onEnded { _ in
+                isDraggingRow = false
+                reorder?(.finished)
+            }
     }
 }
 
 /// Wired devices that haven't been the output lately, folded behind one row.
 /// Expanding is per-popover-open state; selecting a device stamps it used and
-/// promotes it to the main list.
+/// promotes it to the main list. The row doubles as the drop target for
+/// drag-demoting a device out of the main list.
 struct RarelyUsedDisclosure: View {
     let devices: [AudioDevice]
+    var isDropTarget: Bool = false
 
     @State private var isExpanded = false
     @State private var isHovering = false
@@ -80,18 +117,20 @@ struct RarelyUsedDisclosure: View {
                     .frame(width: 18)
                 Text("Rarely used (\(devices.count))")
                     .font(.system(size: 12))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(isDropTarget ? AnyShapeStyle(Color.accentColor) : AnyShapeStyle(.secondary))
                 Spacer()
             }
             .padding(.horizontal, 8)
-            .padding(.vertical, 6)
             .contentShape(RoundedRectangle(cornerRadius: 6))
             .background(
-                isHovering ? AnyShapeStyle(.quaternary.opacity(0.6)) : AnyShapeStyle(.clear),
+                isDropTarget
+                    ? AnyShapeStyle(Color.accentColor.opacity(0.15))
+                    : isHovering ? AnyShapeStyle(.quaternary.opacity(0.6)) : AnyShapeStyle(.clear),
                 in: RoundedRectangle(cornerRadius: 6)
             )
         }
         .buttonStyle(.plain)
+        .frame(height: DeviceRowView.rowHeight)
         .onHover { isHovering = $0 }
 
         if isExpanded {

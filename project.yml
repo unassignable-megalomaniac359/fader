@@ -50,6 +50,7 @@ targets:
       - Tests
       - Fader/Audio/VolumeStore.swift
       - Fader/Audio/DeviceUsageStore.swift
+      - Fader/Audio/DevicePriorityStore.swift
     settings:
       base:
         GENERATE_INFOPLIST_FILE: true
