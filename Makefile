@@ -3,6 +3,11 @@
 
 XCODEPROJ := Fader.xcodeproj
 SCHEME    := Fader
+
+# wrangler auth: the infra repo's Cloudflare token is the single source of
+# truth; its OAuth session points at the wrong account.
+export CLOUDFLARE_ACCOUNT_ID := 256a25a6ed7e920b09a562595db72539
+export CLOUDFLARE_API_TOKEN := $(shell grep ^CLOUDFLARE_API_TOKEN= $(HOME)/projects/pantafive/infra/.env | cut -d= -f2)
 IDENTITY  := Developer ID Application: Mikhail Solomenik (7T47AFG34U)
 NOTARY    := Stenografista-Notarize
 APP       := build/Build/Products/Release/Fader.app
