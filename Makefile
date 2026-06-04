@@ -54,6 +54,7 @@ release: check-version test
 		CODE_SIGN_IDENTITY="$(IDENTITY)" \
 		DEVELOPMENT_TEAM=7T47AFG34U \
 		OTHER_CODE_SIGN_FLAGS="--timestamp --options=runtime" \
+		CODE_SIGN_INJECT_BASE_ENTITLEMENTS=NO \
 		-derivedDataPath build build
 	mkdir -p dist
 	ditto -c -k --keepParent "$(APP)" dist/Fader.zip
