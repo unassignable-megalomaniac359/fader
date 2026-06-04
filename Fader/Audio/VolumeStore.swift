@@ -1,4 +1,5 @@
 import Foundation
+import os
 
 /// Per-app volume settings persisted across launches, keyed by bundle identifier.
 struct AppVolume: Codable, Equatable {
@@ -28,7 +29,12 @@ struct VolumeStore {
     func save(_ volumes: [String: AppVolume]) {
         // Neutral entries carry no information — drop them to keep the blob minimal.
         let meaningful = volumes.filter { !$0.value.isNeutral }
-        guard let data = try? JSONEncoder().encode(meaningful) else { return }
+        guard let data = try? JSONEncoder().encode(meaningful) else {
+            // Practically unreachable for [String: AppVolume]; don't fail silently.
+            Logger(subsystem: "dev.pantafive.fader", category: "VolumeStore")
+                .error("Failed to encode app volumes; settings not persisted")
+            return
+        }
         defaults.set(data, forKey: Self.key)
     }
 }

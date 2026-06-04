@@ -21,6 +21,10 @@ final class ProcessTap: @unchecked Sendable {
     private nonisolated(unsafe) var _currentGain: Float
     /// Per-frame ramp coefficient for ~30 ms exponential gain smoothing.
     private nonisolated(unsafe) var _rampCoefficient: Float = 0.0007
+    /// The gain path assumes Float32 PCM. Verified at activation; on any other
+    /// format the render falls back to bit-exact passthrough instead of
+    /// reinterpreting foreign bytes as floats.
+    private nonisolated(unsafe) var _isFloat32 = true
 
     private var tapID = AudioObjectID.unknown
     private var aggregateID = AudioObjectID.unknown
@@ -84,6 +88,8 @@ final class ProcessTap: @unchecked Sendable {
         try? aggregateID.read(kAudioDevicePropertyNominalSampleRate, into: &sampleRate)
         _rampCoefficient = 1 - exp(-1 / (Float(sampleRate) * 0.030))
 
+        verifyStreamFormat()
+
         var proc: AudioDeviceIOProcID?
         try checked(
             // @Sendable strips inferred @MainActor isolation: the HAL invokes
@@ -103,6 +109,22 @@ final class ProcessTap: @unchecked Sendable {
         let processIDs = processObjectIDs.map(String.init).joined(separator: ",")
         Self.logger
             .info("Tap active for processes [\(processIDs, privacy: .public)]: tap \(tap), aggregate \(aggregate)")
+    }
+
+    /// Confirms the gain path's Float32 PCM assumption against the aggregate's
+    /// actual stream format; any other format flips the render to passthrough.
+    @MainActor
+    private func verifyStreamFormat() {
+        var format = AudioStreamBasicDescription()
+        guard (try? aggregateID.read(kAudioDevicePropertyStreamFormat,
+                                     scope: kAudioDevicePropertyScopeOutput,
+                                     into: &format)) != nil else { return }
+        _isFloat32 = format.mFormatID == kAudioFormatLinearPCM
+            && format.mFormatFlags & kAudioFormatFlagIsFloat != 0
+            && format.mBitsPerChannel == 32
+        if !_isFloat32 {
+            Self.logger.warning("Aggregate stream is not Float32 PCM; gain disabled, passing through")
+        }
     }
 
     /// Tears down in the HAL-required order: stop → IO proc → aggregate → tap.
@@ -141,6 +163,10 @@ final class ProcessTap: @unchecked Sendable {
             Self.silence(output)
             return
         }
+        if !_isFloat32 {
+            Self.passthrough(input, into: output)
+            return
+        }
 
         let inputs = UnsafeMutableAudioBufferListPointer(UnsafeMutablePointer(mutating: input))
         let outputs = UnsafeMutableAudioBufferListPointer(output)
@@ -161,13 +187,19 @@ final class ProcessTap: @unchecked Sendable {
             let count = min(Int(inputs[index].mDataByteSize) / MemoryLayout<Float>.size, outCount)
             let channels = max(1, Int(outBuffer.mNumberChannels))
 
-            gain = _currentGain
+            // One ramp shared across the buffer list; in practice taps deliver
+            // a single interleaved buffer, so this is exact.
             var frameGain = gain
             for frame in stride(from: 0, to: count, by: channels) {
                 frameGain += (targetGain - frameGain) * ramp
                 for channel in 0 ..< channels where frame + channel < count {
                     outSamples[frame + channel] = inSamples[frame + channel] * frameGain
                 }
+            }
+            // Snap once converged: stops the asymptotic tail (denormal-prone
+            // when ramping to 0 on non-Apple-silicon FPUs).
+            if abs(frameGain - targetGain) < 1e-6 {
+                frameGain = targetGain
             }
             gain = frameGain
             if count < outCount {
@@ -181,6 +213,25 @@ final class ProcessTap: @unchecked Sendable {
         for buffer in UnsafeMutableAudioBufferListPointer(output) {
             if let data = buffer.mData {
                 memset(data, 0, Int(buffer.mDataByteSize))
+            }
+        }
+    }
+
+    /// Bit-exact copy for unexpected stream formats: no gain, no reinterpretation.
+    private static func passthrough(_ input: UnsafePointer<AudioBufferList>,
+                                    into output: UnsafeMutablePointer<AudioBufferList>) {
+        let inputs = UnsafeMutableAudioBufferListPointer(UnsafeMutablePointer(mutating: input))
+        for (index, outBuffer) in UnsafeMutableAudioBufferListPointer(output).enumerated() {
+            guard let outData = outBuffer.mData else { continue }
+            let outBytes = Int(outBuffer.mDataByteSize)
+            guard index < inputs.count, let inData = inputs[index].mData else {
+                memset(outData, 0, outBytes)
+                continue
+            }
+            let bytes = min(Int(inputs[index].mDataByteSize), outBytes)
+            memcpy(outData, inData, bytes)
+            if bytes < outBytes {
+                memset(outData.advanced(by: bytes), 0, outBytes - bytes)
             }
         }
     }

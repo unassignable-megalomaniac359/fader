@@ -23,11 +23,20 @@ final class BluetoothAudioMonitor {
     /// Addresses with a connect/disconnect operation in flight.
     private(set) var busy: Set<String> = []
 
+    /// Orders overlapping refreshes: a stale enumeration that finishes late
+    /// must not overwrite a fresher list.
+    @ObservationIgnored private var refreshGeneration = 0
+
     /// Enumerates off the main actor — IOBluetooth calls can block.
     func refresh() {
+        refreshGeneration += 1
+        let generation = refreshGeneration
         Task.detached(priority: .userInitiated) {
             let devices = Self.readPairedAudioDevices()
-            await MainActor.run { [weak self] in self?.paired = devices }
+            await MainActor.run { [weak self] in
+                guard let self, generation == refreshGeneration else { return }
+                paired = devices
+            }
         }
     }
 

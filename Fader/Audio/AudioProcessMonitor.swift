@@ -18,6 +18,7 @@ final class AudioProcessMonitor {
     @ObservationIgnored private var pollTask: Task<Void, Never>?
 
     func start() {
+        guard pollTask == nil else { return } // idempotent: a second call must not double-listen
         // List changes (process appeared / exited) arrive as HAL notifications.
         listListener = AudioObjectID.system.listen(kAudioHardwarePropertyProcessObjectList) {
             Task { @MainActor [weak self] in self?.scheduleRefresh() }
@@ -76,8 +77,10 @@ final class AudioProcessMonitor {
             else { continue }
 
             let key = running.processIdentifier
-            groups[key, default: Group(app: running)].objects.append(objectID)
-            groups[key]!.playing = groups[key]!.playing || objectID.readProcessIsRunningOutput()
+            var group = groups[key] ?? Group(app: running)
+            group.objects.append(objectID)
+            group.playing = group.playing || objectID.readProcessIsRunningOutput()
+            groups[key] = group
         }
 
         var nextApps = groups.compactMap { pid, group -> AudioApp? in
@@ -102,7 +105,8 @@ final class AudioProcessMonitor {
         if nextApps != apps {
             apps = nextApps
             let names = nextApps.map { "\($0.name)\($0.isPlaying ? "*" : "")" }.joined(separator: ", ")
-            Self.logger.info("Apps: \(nextApps.count)/\(objectIDs.count) HAL processes — \(names, privacy: .public)")
+            // App names stay redacted in the unified log (default .private).
+            Self.logger.info("Apps: \(nextApps.count)/\(objectIDs.count) HAL processes — \(names)")
         }
     }
 

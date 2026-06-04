@@ -285,8 +285,14 @@
       slider.setPointerCapture(event.pointerId);
       setValue(event);
       const move = (e) => setValue(e);
+      const stop = () => {
+        slider.removeEventListener("pointermove", move);
+        slider.removeEventListener("pointerup", stop);
+        slider.removeEventListener("pointercancel", stop);
+      };
       slider.addEventListener("pointermove", move);
-      slider.addEventListener("pointerup", () => slider.removeEventListener("pointermove", move), { once: true });
+      slider.addEventListener("pointerup", stop);
+      slider.addEventListener("pointercancel", stop);
     });
   });
 

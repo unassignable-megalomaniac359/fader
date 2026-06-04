@@ -4,7 +4,7 @@
 XCODEPROJ := Fader.xcodeproj
 SCHEME    := Fader
 
-.PHONY: gen build test lint format run clean icon
+.PHONY: gen build test lint format run clean icon og
 
 gen:
 	xcodegen generate
@@ -40,3 +40,8 @@ icon:
 		sips -z $$((size * 2)) $$((size * 2)) /tmp/fader-icon-1024.png --out /tmp/fader.iconset/icon_$${size}x$${size}@2x.png > /dev/null; \
 	done
 	iconutil -c icns /tmp/fader.iconset -o Fader/Resources/Fader.icns
+
+# Regenerate the site's Open Graph preview card.
+og:
+	swift scripts/generate-og.swift site/og.png
+	pngquant --force --quality 65-85 --output site/og.png site/og.png

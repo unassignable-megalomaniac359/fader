@@ -19,6 +19,10 @@ extension AudioObjectID {
     }
 
     /// Reads a fixed-size property value.
+    ///
+    /// `T` must be a trivial C-layout value type (numbers, structs of them,
+    /// CoreAudio descriptors): the HAL blits raw bytes over it, which would
+    /// corrupt ARC-managed references. Strings go through `readString`.
     func read<T>(_ selector: AudioObjectPropertySelector,
                  scope: AudioObjectPropertyScope = kAudioObjectPropertyScopeGlobal,
                  into value: inout T) throws {
@@ -55,7 +59,8 @@ extension AudioObjectID {
         return value as String
     }
 
-    /// Writes a fixed-size property value.
+    /// Writes a fixed-size property value. Same `T` contract as `read`:
+    /// trivial C-layout value types only.
     func write<T>(_ selector: AudioObjectPropertySelector,
                   scope: AudioObjectPropertyScope = kAudioObjectPropertyScopeGlobal,
                   value: T) throws {
@@ -89,10 +94,6 @@ extension AudioObjectID {
         var pid: pid_t = -1
         try read(kAudioProcessPropertyPID, into: &pid)
         return pid
-    }
-
-    func readProcessBundleID() -> String {
-        (try? readString(kAudioProcessPropertyBundleID)) ?? ""
     }
 
     func readProcessIsRunningOutput() -> Bool {

@@ -26,16 +26,25 @@ final class SystemVolumeController {
     }
 
     func setVolume(_ value: Float) {
-        volume = max(0, min(1, value))
-        try? device.write(kAudioHardwareServiceDeviceProperty_VirtualMainVolume,
-                          scope: kAudioDevicePropertyScopeOutput,
-                          value: volume)
+        let clamped = max(0, min(1, value))
+        do {
+            try device.write(kAudioHardwareServiceDeviceProperty_VirtualMainVolume,
+                             scope: kAudioDevicePropertyScopeOutput,
+                             value: clamped)
+            volume = clamped
+        } catch {
+            readBack() // keep published state honest when the HAL write fails
+        }
     }
 
     func toggleMute() {
         let next: UInt32 = isMuted ? 0 : 1
-        try? device.write(kAudioDevicePropertyMute, scope: kAudioDevicePropertyScopeOutput, value: next)
-        isMuted.toggle()
+        do {
+            try device.write(kAudioDevicePropertyMute, scope: kAudioDevicePropertyScopeOutput, value: next)
+            isMuted = next != 0
+        } catch {
+            readBack()
+        }
     }
 
     // MARK: - Private

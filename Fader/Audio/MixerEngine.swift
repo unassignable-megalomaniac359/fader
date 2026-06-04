@@ -28,7 +28,6 @@ final class MixerEngine {
     @ObservationIgnored private var taps: [String: ProcessTap] = [:]
     @ObservationIgnored private let store = VolumeStore()
     @ObservationIgnored private var deviceListener: HALListener?
-    @ObservationIgnored private var appsObservation: (() -> Void)?
     @ObservationIgnored private var saveTask: Task<Void, Never>?
     @ObservationIgnored private var routingTask: Task<Void, Never>?
 
