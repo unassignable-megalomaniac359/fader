@@ -4,10 +4,12 @@ import SwiftUI
 @main
 struct FaderApp: App {
     @State private var engine: MixerEngine
+    @State private var statusMenu = StatusItemMenuController()
 
     init() {
         let engine = MixerEngine()
         _engine = State(initialValue: engine)
+        statusMenu.install()
         // The detached probe gates engine.start(): the first HAL contact
         // happens off the main thread, so a wedged coreaudiod hangs the probe
         // while the menu bar icon renders and shows a waiting state. start()

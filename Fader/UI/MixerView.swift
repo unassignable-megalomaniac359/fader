@@ -42,10 +42,6 @@ struct MixerView: View {
             } else {
                 appsSection
             }
-
-            Divider()
-
-            FooterView()
         }
         .padding(12)
         .frame(width: 320)
