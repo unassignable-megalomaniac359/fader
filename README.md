@@ -44,7 +44,7 @@ The permission's name sounds broader than what Fader does with it: the tapped au
 
 ## Privacy
 
-There is no network code in the app, so it cannot phone home even by accident. The website loads no external resources either. The claim is checkable: read the source and confirm nothing reaches out.
+There is no network code in the app, so it cannot phone home even by accident. The claim is checkable: read the source and confirm nothing reaches out.
 
 ## Development
 
