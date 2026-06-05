@@ -250,13 +250,11 @@ struct DeviceListSection: View {
                     value: rowOffset(index: index, main: main)
                 )
             }
-            if !rarelyUsed.isEmpty || draggedUID != nil {
-                RarelyUsedDisclosure(
-                    devices: rarelyUsed,
-                    monitor: monitor,
-                    isDropTarget: isDemoteTargeted(main: main)
-                )
-            }
+            RarelyUsedDisclosure(
+                devices: rarelyUsed,
+                monitor: monitor,
+                isDropTarget: isDemoteTargeted(main: main)
+            )
         }
         .padding(.horizontal, -8)
     }

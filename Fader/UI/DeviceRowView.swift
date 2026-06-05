@@ -100,7 +100,8 @@ struct DeviceRowView: View {
 /// Wired devices that haven't been the output lately, folded behind one row.
 /// Expanding is per-popover-open state; selecting a device stamps it used and
 /// promotes it to the main list. The row doubles as the drop target for
-/// drag-demoting a device out of the main list.
+/// drag-demoting a device out of the main list; it stays visible even empty
+/// so the demote affordance is discoverable, just dimmed with a (0).
 struct RarelyUsedDisclosure: View {
     let devices: [AudioDevice]
     let monitor: AudioDeviceMonitor
@@ -111,7 +112,7 @@ struct RarelyUsedDisclosure: View {
 
     var body: some View {
         Button {
-            isExpanded.toggle()
+            if !devices.isEmpty { isExpanded.toggle() }
         } label: {
             HStack(spacing: 8) {
                 Image(systemName: "chevron.right")
@@ -121,7 +122,11 @@ struct RarelyUsedDisclosure: View {
                     .frame(width: 18)
                 Text("Rarely used (\(devices.count))")
                     .font(.system(size: 12))
-                    .foregroundStyle(isDropTarget ? AnyShapeStyle(Color.accentColor) : AnyShapeStyle(.secondary))
+                    .foregroundStyle(
+                        isDropTarget
+                            ? AnyShapeStyle(Color.accentColor)
+                            : devices.isEmpty ? AnyShapeStyle(.tertiary) : AnyShapeStyle(.secondary)
+                    )
                 Spacer()
             }
             .padding(.horizontal, 8)
@@ -136,6 +141,9 @@ struct RarelyUsedDisclosure: View {
         .buttonStyle(.plain)
         .frame(height: DeviceRowView.rowHeight)
         .onHover { isHovering = $0 }
+        .onChange(of: devices.isEmpty) { _, empty in
+            if empty { isExpanded = false }
+        }
 
         if isExpanded {
             ForEach(devices) { device in
