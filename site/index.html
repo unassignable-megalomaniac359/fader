@@ -344,6 +344,7 @@
   .mock .row.dragging { background: rgba(255, 255, 255, 0.07); opacity: 0.9; position: relative; z-index: 5; cursor: grabbing; }
   .mock.drag-live .row:not(.dragging):hover { background: transparent; }
   .mock .row.drop-target { background: rgba(91, 155, 255, 0.18); color: var(--text); }
+  .mock .row.ghost { outline: 1px dashed #3a4150; outline-offset: -1px; opacity: 0.65; }
   .mock .row .chev { font-size: 15px; line-height: 1; transition: transform 0.2s ease; }
   .mock .row.open .chev { transform: rotate(90deg); }
   .mock .fold .row { padding-left: 24px; }
@@ -458,7 +459,7 @@
           <div class="app">&#127909; QuickTime Player <span class="rec">&#9679;</span></div>
         </div>
       </div>
-      <div class="side" aria-hidden="true">
+      <div class="side side-devices" aria-hidden="true">
         <div class="cap2">DEVICES</div>
         <div class="scard dcard" data-dev="AirPods Pro">
           <span class="dico">&#127911;</span>
@@ -590,6 +591,8 @@
       const active = activeOutRow()?.dataset.device;
       document.querySelectorAll(".dcard").forEach((card) => {
         const name = card.dataset.dev;
+        const row = document.querySelector(`#mock [data-pane="out"] .row[data-device="${CSS.escape(name)}"]`);
+        card.style.display = row && row.parentElement === rareFold ? "none" : ""; // folded → no card
         const off = name in btConnected && !btConnected[name];
         card.classList.toggle("off", off);
         card.classList.toggle("active", !off && name === active);
@@ -653,6 +656,7 @@
       if (row.parentElement === rareFold) {
         rareFold.parentElement.insertBefore(row, rareToggle);
         syncRare();
+        ensureCard(row.dataset.device);
       }
     };
 
@@ -666,7 +670,7 @@
 
     document.querySelectorAll("#mock [data-pane] .row[data-device]").forEach((row) => {
       row.addEventListener("click", () => {
-        if (row.dataset.dragged) { delete row.dataset.dragged; return; }
+        if (row.dataset.dragged) return;
         activate(row);
         updateScene();
       });
@@ -718,7 +722,7 @@
     });
 
     // --- Device cards are clickable too: switch to it, or connect it first.
-    document.querySelectorAll(".dcard").forEach((card) => {
+    const attachCard = (card) => {
       card.addEventListener("click", () => {
         const name = card.dataset.dev;
         if (name in btConnected && !btConnected[name]) {
@@ -730,7 +734,23 @@
         if (row) activate(row);
         updateScene();
       });
-    });
+    };
+    document.querySelectorAll(".dcard").forEach(attachCard);
+
+    // A device surfacing from Rarely used earns its card in the panel.
+    const ensureCard = (name) => {
+      if (document.querySelector(`.dcard[data-dev="${CSS.escape(name)}"]`)) return;
+      const row = document.querySelector(`#mock [data-pane="out"] .row[data-device="${CSS.escape(name)}"]`);
+      const emoji = row.firstChild.textContent.trim().split(/\s+/)[0];
+      const card = document.createElement("div");
+      card.className = "scard dcard";
+      card.dataset.dev = name;
+      card.innerHTML = '<span class="dico"></span><span class="meta"><span class="name"></span><span class="sub state">Ready</span></span>';
+      card.querySelector(".dico").textContent = emoji;
+      card.querySelector(".name").textContent = name;
+      document.querySelector(".side-devices").appendChild(card);
+      attachCard(card);
+    };
 
     // --- Rarely used: a disclosure group, like the app's. The app never
     // folds the current default away — an activated wired device pops out
@@ -738,6 +758,7 @@
     const rareToggle = document.getElementById("rare-toggle");
     const rareFold = document.getElementById("rare-fold");
     rareToggle.addEventListener("click", () => {
+      if (!rareFold.querySelectorAll(".row").length) return;
       rareFold.hidden = !rareFold.hidden;
       rareToggle.classList.toggle("open", !rareFold.hidden);
       drawFlows(); // the mock grew or shrank — curves must follow
@@ -746,7 +767,7 @@
     const syncRare = () => {
       const n = rareFold.querySelectorAll(".row").length;
       document.getElementById("rare-n").textContent = n;
-      rareToggle.style.display = n ? "" : "none";
+      rareToggle.classList.toggle("ghost", !n);
       if (!n) { rareFold.hidden = true; rareToggle.classList.remove("open"); }
     };
 
@@ -761,20 +782,30 @@
         let dragging = false;
         let baseTop = 0;
         const overRare = (y) => {
-          if (rareToggle.style.display === "none") return false;
           const r = rareToggle.getBoundingClientRect();
           return y >= r.top && y <= r.bottom;
         };
         const move = (ev) => {
           if (!dragging && Math.abs(ev.clientY - startY) > 6) {
             dragging = true;
-            row.setPointerCapture(event.pointerId);
             row.classList.add("dragging");
             mock.classList.add("drag-live");
             baseTop = row.getBoundingClientRect().top;
           }
           if (!dragging) return;
-          const desiredTop = ev.clientY - grabOffset;
+          // confine the row to the device-list span (top slot … the group row)
+          let minTop = baseTop;
+          let maxTop = baseTop;
+          for (const sib of row.parentElement.querySelectorAll(".row[data-device]")) {
+            if (sib === row || sib.parentElement === rareFold || sib.style.display === "none") continue;
+            const t = sib.getBoundingClientRect().top;
+            minTop = Math.min(minTop, t);
+            maxTop = Math.max(maxTop, t);
+          }
+          if (canDemote(row)) {
+            maxTop = Math.max(maxTop, rareToggle.getBoundingClientRect().top);
+          }
+          const desiredTop = Math.min(Math.max(ev.clientY - grabOffset, minTop), maxTop);
           const center = desiredTop + row.offsetHeight / 2;
           const dropOK = overRare(ev.clientY) && canDemote(row);
           rareToggle.classList.toggle("drop-target", dropOK);
@@ -794,24 +825,27 @@
           drawFlows();
         };
         const stop = (ev) => {
-          row.removeEventListener("pointermove", move);
-          row.removeEventListener("pointerup", stop);
-          row.removeEventListener("pointercancel", stop);
+          window.removeEventListener("pointermove", move);
+          window.removeEventListener("pointerup", stop);
+          window.removeEventListener("pointercancel", stop);
           if (!dragging) return;
           row.style.transform = "";
           row.classList.remove("dragging");
           mock.classList.remove("drag-live");
           rareToggle.classList.remove("drop-target");
           row.dataset.dragged = "1"; // swallow the click that follows the drop
+          setTimeout(() => delete row.dataset.dragged, 0); // …but only that one
           if (ev.type === "pointerup" && overRare(ev.clientY) && canDemote(row)) {
             rareFold.append(row);
-            syncRare();
           }
+          syncRare();
           updateScene();
         };
-        row.addEventListener("pointermove", move);
-        row.addEventListener("pointerup", stop);
-        row.addEventListener("pointercancel", stop);
+        // Listen on window: DOM reorders break pointer capture on the row,
+        // and the drag must survive the cursor leaving the popover.
+        window.addEventListener("pointermove", move);
+        window.addEventListener("pointerup", stop);
+        window.addEventListener("pointercancel", stop);
       });
     });
 
