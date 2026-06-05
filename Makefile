@@ -16,7 +16,7 @@ else
 SIGN_FLAGS := CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY=$(SIGN_ID)
 endif
 
-.PHONY: gen build test lint format run clean icon og menubar-icon
+.PHONY: gen build test lint format run clean icon og menubar-icon favicon
 
 gen:
 	xcodegen generate
@@ -61,3 +61,9 @@ menubar-icon:
 og:
 	swift scripts/generate-og.swift site/og.png
 	pngquant --force --quality 65-85 --output site/og.png site/og.png
+
+# Regenerate the site favicon (64 px covers 2x retina tabs).
+favicon:
+	swift scripts/generate-favicon.swift /tmp/fader-favicon-1024.png
+	sips -z 64 64 /tmp/fader-favicon-1024.png --out site/favicon.png > /dev/null
+	pngquant --force --quality 65-85 --output site/favicon.png site/favicon.png
