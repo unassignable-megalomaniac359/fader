@@ -62,8 +62,9 @@ og:
 	swift scripts/generate-og.swift site/og.png
 	pngquant --force --quality 65-85 --output site/og.png site/og.png
 
-# Regenerate the site favicon (64 px covers 2x retina tabs).
+# Regenerate the site favicon (64 px covers 2x retina tabs; .ico for legacy /favicon.ico probers).
 favicon:
 	swift scripts/generate-favicon.swift /tmp/fader-favicon-1024.png
 	sips -z 64 64 /tmp/fader-favicon-1024.png --out site/favicon.png > /dev/null
 	pngquant --force --quality 65-85 --output site/favicon.png site/favicon.png
+	python3 -c "from PIL import Image; Image.open('/tmp/fader-favicon-1024.png').save('site/favicon.ico', sizes=[(16,16),(32,32),(48,48)])"
