@@ -4,21 +4,21 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Fader — volume control for your Mac menu bar</title>
-<meta name="description" content="Free, open-source macOS menu bar app: per-app volume faders, one-click audio output switching, a mic tab. Zero telemetry, ~0.7 MB. macOS 15+, Apple silicon.">
+<meta name="description" content="Free, open-source macOS menu bar app: per-app volume faders, one-click audio output switching, a mic tab. Zero telemetry. macOS 15+, Apple silicon.">
 <link rel="canonical" href="https://fader.pantafive.dev/">
 <link rel="icon" type="image/png" href="/icon.png">
 <meta name="theme-color" content="#0d0e12">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Fader">
 <meta property="og:title" content="Fader — volume control for your Mac menu bar">
-<meta property="og:description" content="Free, open-source macOS menu bar app: per-app volume faders, one-click audio output switching, a mic tab. Zero telemetry, ~0.7 MB. macOS 15+, Apple silicon.">
+<meta property="og:description" content="Free, open-source macOS menu bar app: per-app volume faders, one-click audio output switching, a mic tab. Zero telemetry. macOS 15+, Apple silicon.">
 <meta property="og:url" content="https://fader.pantafive.dev/">
 <meta property="og:image" content="https://fader.pantafive.dev/og.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Fader — volume control for your Mac menu bar">
-<meta name="twitter:description" content="Free, open-source macOS menu bar app: per-app volume faders, one-click audio output switching, a mic tab. Zero telemetry, ~0.7 MB. macOS 15+, Apple silicon.">
+<meta name="twitter:description" content="Free, open-source macOS menu bar app: per-app volume faders, one-click audio output switching, a mic tab. Zero telemetry. macOS 15+, Apple silicon.">
 <meta name="twitter:image" content="https://fader.pantafive.dev/og.png">
 <style>
   :root {
@@ -488,18 +488,18 @@
   <section class="about">
     <h2>Switch audio output on Mac in one click</h2>
     <p>Pick any output device from the menu bar and your sound moves there: headphones, speakers, a display, AirPlay. The active one is marked, so you always know where audio is going. Drag a row and you set its priority; from then on Fader switches to a higher-ranked device when it connects, and falls back to the best one still present when the current default disappears. This ranking stays dormant until you reorder the list the first time, so nothing changes behind your back.</p>
-    <p>Bluetooth gets the same single click. Paired headphones that are currently disconnected still show up in the list; clicking one connects it and routes audio to it in the same motion, and you disconnect from that same row. Wired devices you have not used in 30 days fold into a "Rarely used" group to keep the list short, and you can drag a row onto it to demote one yourself. System volume and mute stay in sync with your volume keys and Control Center.</p>
+    <p>Bluetooth gets the same single click. Paired headphones that are currently disconnected still show up in the list; clicking one connects it and routes audio to it, and you disconnect from that same row. Wired devices you have not used in 30 days fold into a "Rarely used" group to keep the list short, and you can drag a row onto it to demote one yourself. System volume and mute stay in sync with your volume keys and Control Center.</p>
     <h2>Per-app volume on Mac: a fader for every app</h2>
-    <p>Every app that plays sound gets its own volume fader and a mute button. The levels persist across launches, so an app you turned down stays down next time you open it. Scroll the wheel or swipe the trackpad over any slider to adjust it without clicking.</p>
-    <p>An app left at 100% and unmuted is touched by nothing: no tap, no processing, bit-perfect native playback. A tap exists only while a fader sits below full volume or the app is muted, and Fader re-renders that audio to your output with the gain applied. Nothing about the audio leaves your Mac.</p>
+    <p>Every app that plays sound gets its own volume fader and a mute button. The levels persist across launches. Scroll the wheel or swipe the trackpad over any slider to adjust it without clicking.</p>
+    <p>An app left at 100% and unmuted is touched by nothing: no tap, no processing, bit-perfect native playback. A tap exists only while a fader sits below full volume or the app is muted.</p>
     <h2>One honest permission</h2>
-    <p>Most of Fader needs no permission at all. Device switching, system volume, and the entire microphone tab work the moment you install. Per-app volume is the one exception: it uses Core Audio process taps, an API macOS 14.4 added and then gated behind the "System Audio Recording" permission. Fader asks for it the first time you move an app's fader, and never before.</p>
+    <p>Most of Fader needs no permissions. Device switching, system volume, and the entire microphone tab work the moment you install. Per-app volume is the one exception: it uses Core Audio process taps, an API macOS 14.4 added and then gated behind the "System Audio Recording" permission. Fader asks for it the first time you move an app's fader.</p>
     <p>The tapped audio is re-rendered to your output with the gain applied and never leaves the Mac. There are no kernel extensions, no virtual audio drivers, nothing to install in Settings. The name of that permission sounds broader than what Fader does with it, so I would rather explain it here than have it surprise you in a dialog.</p>
     <h2>Switch microphones and watch input</h2>
     <p>The microphone tab switches your default input and sets its input gain from a slider. On devices whose gain is fixed in hardware the slider disables itself, so the control never lies about what it can do. You also see which apps are using the microphone right now, which is enough to spot a forgotten recorder.</p>
     <p>That indicator is the limit of what is possible per app. Core Audio exposes no per-app input gain, so Fader cannot offer one; this is an OS-level API boundary, not a feature waiting on the roadmap.</p>
-    <h2>Native, lightweight, private</h2>
-    <p>Fader is a single signed and notarized binary of about 0.7 MB, built for Apple silicon on macOS 15 and later. It is self-contained, with no kernel extensions or virtual audio drivers to install. Free under the MIT license, it is private in a way you can check: zero telemetry, zero analytics, zero network code. The app has no way to phone home, and the website loads no external resources either.</p>
+    <h2>Native and private</h2>
+    <p>Fader is a native Swift app for Apple silicon, macOS 15 and later, signed and notarized. Free under the MIT license, it is private in a way you can check: zero telemetry, zero analytics, zero network code. The app has no way to phone home, and the website loads no external resources either.</p>
   </section>
 
   <footer>
