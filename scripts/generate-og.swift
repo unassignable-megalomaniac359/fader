@@ -8,12 +8,18 @@ let image = NSImage(size: NSSize(width: width, height: height))
 
 image.lockFocus()
 
-/// Background gradient matching the site.
-let gradient = NSGradient(
-    starting: NSColor(red: 0.10, green: 0.13, blue: 0.21, alpha: 1),
-    ending: NSColor(red: 0.05, green: 0.055, blue: 0.07, alpha: 1)
+// Background matching the site: pure black with a soft blue glow.
+NSColor.black.setFill()
+NSRect(x: 0, y: 0, width: width, height: height).fill()
+let glow = NSGradient(
+    starting: NSColor(red: 0.16, green: 0.59, blue: 1.0, alpha: 0.16),
+    ending: NSColor(red: 0.16, green: 0.59, blue: 1.0, alpha: 0)
 )!
-gradient.draw(in: NSRect(x: 0, y: 0, width: width, height: height), angle: -75)
+glow.draw(
+    fromCenter: NSPoint(x: width * 0.55, y: height * 0.62), radius: 0,
+    toCenter: NSPoint(x: width * 0.55, y: height * 0.62), radius: 520,
+    options: []
+)
 
 // Fader motif on the left.
 let trackWidth: CGFloat = 26
@@ -64,18 +70,19 @@ for fader in positions {
     NSShadow().set()
 }
 
-/// Wordmark and tagline on the right.
+/// Wordmark and tagline on the right, in the site's Apple-style palette.
 let title = NSAttributedString(string: "Fader", attributes: [
     .font: NSFont.systemFont(ofSize: 110, weight: .bold),
-    .foregroundColor: NSColor.white,
+    .foregroundColor: NSColor(red: 0.96, green: 0.96, blue: 0.97, alpha: 1),
+    .kern: -2.2,
 ])
 title.draw(at: NSPoint(x: 560, y: 330))
 
 let tagline = NSAttributedString(
-    string: "Per-app volume, two outputs at once,\none-click switching in your menu bar.",
+    string: "Per-app volume. Two outputs at once.\nOne-click switching in your menu bar.",
     attributes: [
         .font: NSFont.systemFont(ofSize: 38, weight: .regular),
-        .foregroundColor: NSColor(white: 0.62, alpha: 1),
+        .foregroundColor: NSColor(red: 0.525, green: 0.525, blue: 0.545, alpha: 1),
     ]
 )
 tagline.draw(at: NSPoint(x: 564, y: 200))
@@ -84,7 +91,7 @@ let badge = NSAttributedString(
     string: "free · open source · no telemetry",
     attributes: [
         .font: NSFont.systemFont(ofSize: 30, weight: .medium),
-        .foregroundColor: NSColor(red: 0.36, green: 0.61, blue: 1.0, alpha: 1),
+        .foregroundColor: NSColor(red: 0.16, green: 0.59, blue: 1.0, alpha: 1),
     ]
 )
 badge.draw(at: NSPoint(x: 564, y: 120))
