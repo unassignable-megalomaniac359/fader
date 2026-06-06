@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/pantafive/fader/actions/workflows/ci.yml/badge.svg)](https://github.com/pantafive/fader/actions/workflows/ci.yml) [![Release](https://img.shields.io/github/v/release/pantafive/fader)](https://github.com/pantafive/fader/releases/latest) [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-A macOS menu bar app for audio output switching and per-app volume. Switch the output device in one click, connect Bluetooth headphones, and set a separate volume for every app. Site: [fader.pantafive.dev](https://fader.pantafive.dev).
+A macOS menu bar app for audio output switching and per-app volume. Switch the output device in one click, connect Bluetooth headphones, set a separate volume for every app, and play audio to several devices at once. Site: [fader.pantafive.dev](https://fader.pantafive.dev).
 
 <p align="center"><img src="docs/screenshot.png" alt="Fader popover under the menu bar: output devices, Bluetooth section, per-app volume faders"></p>
 
@@ -23,6 +23,12 @@ Or download [the latest dmg](https://github.com/pantafive/fader/releases/latest/
 Headphones, speakers, displays, and AirPlay targets all appear in the popover, with the active one marked; one click on a row switches to it. Paired-but-disconnected Bluetooth headphones are listed too; clicking one connects it and routes audio there, and you disconnect from the same row.
 
 Drag a device row to set its priority. The order becomes your auto-switch preference: when a higher-priority device connects Fader switches to it, and when the current default disappears Fader falls back to the best-ranked device still present. This stays dormant until you first reorder. Wired devices unused for 30 days collapse into a "Rarely used" group, and you can demote a row manually by dragging it onto the group.
+
+### Several outputs at once
+
+Drag a device row onto the Output section at the top and both devices play together: one movie, two pairs of headphones, one plane. Each device in the group gets its own volume slider; the ✕ removes one, and clicking any device row in the list routes everything back to that single device.
+
+Fader builds this on the same multi-output device you could assemble by hand in Audio MIDI Setup, then removes it when you are done. Two things change while a group plays. The volume keys do nothing, because macOS gives a multi-output device no master volume — the per-device sliders replace them. And per-app faders pause, returning with their saved levels as soon as you are back on one output.
 
 ### Per-app volume
 

@@ -72,7 +72,7 @@ let title = NSAttributedString(string: "Fader", attributes: [
 title.draw(at: NSPoint(x: 560, y: 330))
 
 let tagline = NSAttributedString(
-    string: "Per-app volume and one-click output\nswitching in your Mac menu bar.",
+    string: "Per-app volume, two outputs at once,\none-click switching in your menu bar.",
     attributes: [
         .font: NSFont.systemFont(ofSize: 38, weight: .regular),
         .foregroundColor: NSColor(white: 0.62, alpha: 1),

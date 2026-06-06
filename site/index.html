@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Fader — volume control for your Mac menu bar</title>
-<meta name="description" content="Free, open-source macOS menu bar app: per-app volume faders, one-click audio output switching, a mic tab. Zero telemetry. macOS 15+, Apple silicon.">
+<meta name="description" content="Free, open-source macOS menu bar app: per-app volume faders, one-click output switching, audio on two devices at once. Zero telemetry. macOS 15+, Apple silicon.">
 <link rel="canonical" href="https://fader.pantafive.dev/">
 <link rel="icon" type="image/png" href="/favicon.png">
 <link rel="apple-touch-icon" href="/icon.png">
@@ -12,14 +12,14 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Fader">
 <meta property="og:title" content="Fader — volume control for your Mac menu bar">
-<meta property="og:description" content="Free, open-source macOS menu bar app: per-app volume faders, one-click audio output switching, a mic tab. Zero telemetry. macOS 15+, Apple silicon.">
+<meta property="og:description" content="Free, open-source macOS menu bar app: per-app volume faders, one-click output switching, audio on two devices at once. Zero telemetry. macOS 15+, Apple silicon.">
 <meta property="og:url" content="https://fader.pantafive.dev/">
 <meta property="og:image" content="https://fader.pantafive.dev/og.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Fader — volume control for your Mac menu bar">
-<meta name="twitter:description" content="Free, open-source macOS menu bar app: per-app volume faders, one-click audio output switching, a mic tab. Zero telemetry. macOS 15+, Apple silicon.">
+<meta name="twitter:description" content="Free, open-source macOS menu bar app: per-app volume faders, one-click output switching, audio on two devices at once. Zero telemetry. macOS 15+, Apple silicon.">
 <meta name="twitter:image" content="https://fader.pantafive.dev/og.png">
 <style>
   :root {
@@ -549,7 +549,7 @@
         </div>
       </div>
     </div>
-    <p class="tagline">Per-app volume and one-click audio output switching, right in your Mac&nbsp;menu&nbsp;bar.</p>
+    <p class="tagline">Per-app volume, one-click output switching, and audio on two devices at once&nbsp;&mdash; right in your Mac&nbsp;menu&nbsp;bar.</p>
     <a class="download" href="https://github.com/pantafive/fader/releases/latest/download/Fader.dmg">Download for macOS</a>
     <span class="brew">brew install --cask pantafive/tap/fader<button class="copy" aria-label="Copy command">Copy</button></span>
     <p class="fineprint">macOS 15+ &middot; Apple silicon &middot; free &amp; open source</p>
@@ -559,6 +559,9 @@
     <h2>Switch audio output on Mac in one click</h2>
     <p>Pick any output device from the menu bar and your sound moves there: headphones, speakers, a display, AirPlay. The active one is marked, so you always know where audio is going. Drag a row and you set its priority; from then on Fader switches to a higher-ranked device when it connects, and falls back to the best one still present when the current default disappears. This ranking stays dormant until you reorder the list the first time, so nothing changes behind your back.</p>
     <p>Bluetooth gets the same single click. Paired headphones that are currently disconnected still show up in the list; clicking one connects it and routes audio to it, and you disconnect from that same row. Wired devices you have not used in 30 days fold into a "Rarely used" group to keep the list short, and you can drag a row onto it to demote one yourself. System volume and mute stay in sync with your volume keys and Control Center.</p>
+    <h2>Play Mac audio on two devices at once</h2>
+    <p>Drag a device from the list onto the output section and both play together: one movie, two pairs of headphones, one plane. Each device in the group keeps its own volume slider, the ✕ removes it, and clicking any device in the list routes everything back to that single device. Try it in the popover above.</p>
+    <p>Fader builds this on the same multi-output device you could assemble by hand in Audio MIDI Setup, then removes it when you are done. Two things change while a group plays. The volume keys do nothing, because macOS gives a multi-output device no master volume — the per-device sliders replace them. And per-app faders pause, returning with their saved levels as soon as you are back on one output.</p>
     <h2>Per-app volume on Mac: a fader for every app</h2>
     <p>Every app that plays sound gets its own volume fader and a mute button. The levels persist across launches. Scroll the wheel or swipe the trackpad over any slider to adjust it without clicking.</p>
     <p>An app left at 100% and unmuted is touched by nothing: no tap, no processing, bit-perfect native playback. A tap exists only while a fader sits below full volume or the app is muted.</p>
