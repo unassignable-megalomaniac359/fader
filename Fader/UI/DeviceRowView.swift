@@ -10,9 +10,12 @@ struct DeviceRowView: View {
     /// Vertical rhythm of the device list; MixerView's drag math relies on it.
     static let rowHeight: CGFloat = 28
 
+    /// Translation drives the reorder math; the cursor location (global
+    /// space, same as the pair zone's measured frame) decides drops into the
+    /// active-outputs zone.
     enum ReorderEvent {
-        case moved(CGFloat)
-        case finished
+        case moved(translation: CGFloat, location: CGPoint)
+        case finished(location: CGPoint)
     }
 
     @Environment(MixerEngine.self) private var engine
@@ -88,11 +91,11 @@ struct DeviceRowView: View {
             .onChanged { gesture in
                 guard reorder != nil else { return }
                 isDraggingRow = true
-                reorder?(.moved(gesture.translation.height))
+                reorder?(.moved(translation: gesture.translation.height, location: gesture.location))
             }
-            .onEnded { _ in
+            .onEnded { gesture in
                 isDraggingRow = false
-                reorder?(.finished)
+                reorder?(.finished(location: gesture.location))
             }
     }
 }

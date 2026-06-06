@@ -17,6 +17,7 @@ final class MixerEngine {
     let inputVolume = SystemVolumeController(direction: .input)
     let inputDeviceMonitor = AudioDeviceMonitor(direction: .input)
     let bluetooth = BluetoothAudioMonitor()
+    let multiOutput = MultiOutputController()
 
     /// Set when tap creation fails with a permission-shaped error.
     private(set) var needsAudioCapturePermission = false
@@ -41,6 +42,7 @@ final class MixerEngine {
         deviceMonitor.start()
         inputVolume.start()
         inputDeviceMonitor.start()
+        multiOutput.start()
         bluetooth.refresh()
 
         // Rebuild taps when the default output device changes — each aggregate
@@ -97,6 +99,17 @@ final class MixerEngine {
         }
     }
 
+    /// Adds a device to the active outputs, building the multi-output route
+    /// on the first pairing.
+    func pair(_ device: AudioDevice) {
+        let current = deviceMonitor.devices.first { $0.id == deviceMonitor.defaultDeviceID }
+        multiOutput.pair(device, currentDefault: current)
+    }
+
+    func unpair(_ device: AudioDevice) {
+        multiOutput.remove(device)
+    }
+
     /// Drops the tap for an app, restoring its native audio path.
     func reset(_ app: AudioApp) {
         volumes[app.bundleID] = nil
@@ -127,8 +140,10 @@ final class MixerEngine {
             _ = deviceMonitor.devices
         } onChange: { [weak self] in
             Task { @MainActor in
-                self?.refreshBluetoothSoon()
-                self?.observeDevices()
+                guard let self else { return }
+                self.refreshBluetoothSoon()
+                self.multiOutput.handleDevicesChanged(present: self.deviceMonitor.devices)
+                self.observeDevices()
             }
         }
     }
@@ -193,6 +208,12 @@ final class MixerEngine {
     }
 
     private func createTap(for app: AudioApp, entry: AppVolume) {
+        // Per-app taps are suspended while multi-output plays: a tap aggregate
+        // pinned to another aggregate is unproven (the CLI probe's IO proc
+        // never fired), and a silently dead tap would mute the app outright.
+        // Saved volumes survive and re-apply once multi-output dissolves.
+        guard !multiOutput.isActive else { return }
+
         let outputUID: String
         do {
             outputUID = try AudioObjectID.readDefaultOutputDevice().readDeviceUID()

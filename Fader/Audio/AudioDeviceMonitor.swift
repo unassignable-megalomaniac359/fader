@@ -38,6 +38,19 @@ struct AudioDevice: Identifiable, Hashable {
     }
 }
 
+extension AudioDevice {
+    /// Reads the device's identity straight from the HAL; nil once it's gone.
+    /// (Lives in an extension to keep the memberwise initializer.)
+    init?(id: AudioObjectID) {
+        guard let uid = try? id.readDeviceUID(),
+              let name = try? id.readString(kAudioObjectPropertyName)
+        else { return nil }
+        var transport: UInt32 = 0
+        try? id.read(kAudioDevicePropertyTransportType, into: &transport)
+        self.init(id: id, uid: uid, name: name, transport: transport)
+    }
+}
+
 /// Watches the devices of one direction and the system default, and switches
 /// the default. Usage stamps and drag-priority persist per direction.
 @MainActor
@@ -133,15 +146,12 @@ final class AudioDeviceMonitor {
         let previousUIDs = Set(devices.map(\.uid))
         devices = sorted(ids.compactMap { id in
             guard id.channelCount(scope: direction.scope) > 0,
-                  let uid = try? id.readDeviceUID(),
-                  let name = try? id.readString(kAudioObjectPropertyName)
+                  let device = AudioDevice(id: id),
+                  // Fader's own aggregates (tap devices, the multi-output) are
+                  // plumbing, not user choices.
+                  device.transport != kAudioDeviceTransportTypeAggregate || !device.name.hasPrefix("Fader")
             else { return nil }
-            var transport: UInt32 = 0
-            try? id.read(kAudioDevicePropertyTransportType, into: &transport)
-            // Private aggregates (including Fader's own tap devices) are plumbing,
-            // not user choices.
-            guard transport != kAudioDeviceTransportTypeAggregate || !name.hasPrefix("Fader") else { return nil }
-            return AudioDevice(id: id, uid: uid, name: name, transport: transport)
+            return device
         })
 
         autoSwitch(previousUIDs: previousUIDs, defaultUID: defaultUID)
@@ -173,7 +183,9 @@ final class AudioDeviceMonitor {
     /// - the previous default disappeared → override macOS's fallback with
     ///   the best-ranked device still present.
     private func autoSwitch(previousUIDs: Set<String>, defaultUID: String?) {
-        guard hasBaseline else { return }
+        // While multi-output plays, the default is Fader's own aggregate —
+        // priority switching would silently tear the pairing apart.
+        guard hasBaseline, defaultUID != MultiOutputController.aggregateUID else { return }
 
         if let previous = lastDefaultUID, previousUIDs.contains(previous),
            !devices.contains(where: { $0.uid == previous }) {
@@ -196,7 +208,7 @@ final class AudioDeviceMonitor {
     /// Records that the current default output is in use. Writes are throttled
     /// to one per hour per device — ample granularity for a 30-day window.
     private func stampDefaultDevice(uid: String?, now: Date = Date()) {
-        guard let uid else { return }
+        guard let uid, uid != MultiOutputController.aggregateUID else { return }
         if let stamp = lastUsed[uid], now.timeIntervalSince(stamp) < 3600 { return }
         lastUsed[uid] = now
         usageStore.save(lastUsed, now: now)

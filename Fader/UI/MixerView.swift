@@ -8,23 +8,36 @@ struct MixerView: View {
     @Environment(MixerEngine.self) private var engine
 
     @State private var direction: AudioDirection = .output
-
-    private var activeMonitor: AudioDeviceMonitor {
-        direction == .input ? engine.inputDeviceMonitor : engine.deviceMonitor
-    }
-
-    private var activeVolume: SystemVolumeController {
-        direction == .input ? engine.inputVolume : engine.systemVolume
-    }
+    /// Frame of the active-outputs zone in global coordinates — the drop
+    /// target for pairing a second output device.
+    @State private var pairZoneFrame: CGRect = .null
+    @State private var isPairTarget = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             directionPicker
 
-            volumeSection
-
-            if engine.isStarted, activeMonitor.devices.count > 1 {
-                DeviceListSection(monitor: activeMonitor)
+            if direction == .output {
+                ActiveOutputsSection(isPairTarget: isPairTarget)
+                    .onGeometryChange(for: CGRect.self) { proxy in
+                        proxy.frame(in: .global)
+                    } action: { frame in
+                        pairZoneFrame = frame
+                    }
+                if engine.isStarted, hasOutputListRows {
+                    DeviceListSection(
+                        monitor: engine.deviceMonitor,
+                        excludedUIDs: activeOutputUIDs,
+                        pairZone: pairZoneFrame,
+                        onPairHover: { isPairTarget = $0 },
+                        onPair: { engine.pair($0) }
+                    )
+                }
+            } else {
+                inputVolumeSection
+                if engine.isStarted, engine.inputDeviceMonitor.devices.count > 1 {
+                    DeviceListSection(monitor: engine.inputDeviceMonitor)
+                }
             }
 
             if engine.isStarted, !disconnectedBluetooth.isEmpty {
@@ -46,6 +59,20 @@ struct MixerView: View {
         .padding(12)
         .frame(width: 320)
         .task { engine.bluetooth.refresh() }
+    }
+
+    /// Active outputs live in the zone above the list, not in the list:
+    /// multi-output members when pairing is on, otherwise the default device.
+    private var activeOutputUIDs: Set<String> {
+        if engine.multiOutput.isActive {
+            return Set(engine.multiOutput.members.map(\.device.uid))
+        }
+        let monitor = engine.deviceMonitor
+        return Set(monitor.devices.filter { $0.id == monitor.defaultDeviceID }.map(\.uid))
+    }
+
+    private var hasOutputListRows: Bool {
+        engine.deviceMonitor.devices.contains { !activeOutputUIDs.contains($0.uid) }
     }
 
     /// Full-width segmented switch — the native compact picker is a fiddly
@@ -103,13 +130,14 @@ struct MixerView: View {
         .padding(.horizontal, -8)
     }
 
-    private var volumeSection: some View {
-        VStack(alignment: .leading, spacing: 5) {
+    private var inputVolumeSection: some View {
+        let inputVolume = engine.inputVolume
+        return VStack(alignment: .leading, spacing: 5) {
             HStack {
-                Text(direction == .input ? "Input" : "Output")
+                Text("Input")
                     .font(.system(size: 12, weight: .semibold))
                 Spacer()
-                Text(activeVolume.deviceName)
+                Text(inputVolume.deviceName)
                     .font(.system(size: 11))
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
@@ -119,23 +147,16 @@ struct MixerView: View {
             // reads as broken, so it dims and freezes instead.
             ControlSlider(
                 value: Binding(
-                    get: { activeVolume.volume },
-                    set: { activeVolume.setVolume($0) }
+                    get: { inputVolume.volume },
+                    set: { inputVolume.setVolume($0) }
                 ),
-                icon: volumeIcon,
-                iconDimmed: activeVolume.isMuted,
-                onIconTap: activeVolume.canMute ? { activeVolume.toggleMute() } : nil
+                icon: inputVolume.isMuted ? "mic.slash.fill" : "mic.fill",
+                iconDimmed: inputVolume.isMuted,
+                onIconTap: inputVolume.canMute ? { inputVolume.toggleMute() } : nil
             )
-            .disabled(!activeVolume.canSetVolume)
-            .opacity(activeVolume.canSetVolume ? 1.0 : 0.4)
+            .disabled(!inputVolume.canSetVolume)
+            .opacity(inputVolume.canSetVolume ? 1.0 : 0.4)
         }
-    }
-
-    private var volumeIcon: String {
-        if direction == .input {
-            return activeVolume.isMuted ? "mic.slash.fill" : "mic.fill"
-        }
-        return activeVolume.isMuted ? "speaker.slash.fill" : "speaker.wave.3.fill"
     }
 
     /// Apps audible right now, plus silent ones the user has adjusted —
@@ -148,6 +169,11 @@ struct MixerView: View {
     private var appsSection: some View {
         if !engine.isStarted {
             waitingState
+        } else if engine.multiOutput.isActive {
+            // Per-app taps are suspended during multi-output (see
+            // MixerEngine.createTap); live-looking sliders would be a lie.
+            emptyState(icon: "slider.horizontal.3",
+                       message: "Per-app volume is paused while playing to multiple outputs")
         } else if mixerApps.isEmpty {
             emptyState(icon: "waveform.slash", message: "Nothing is playing")
         } else {
@@ -222,18 +248,27 @@ struct MixerView: View {
 /// disclosure (also a drop target for demoting).
 struct DeviceListSection: View {
     let monitor: AudioDeviceMonitor
+    /// Devices shown in the active-outputs zone instead of this list.
+    var excludedUIDs: Set<String> = []
+    /// Frame of the active-outputs zone (global space); a drag ending inside
+    /// it pairs the device instead of reordering. `.null` disables pairing.
+    var pairZone: CGRect = .null
+    var onPairHover: ((Bool) -> Void)?
+    var onPair: ((AudioDevice) -> Void)?
 
     /// Drag state: which row is in flight and how far it travelled.
     @State private var draggedUID: String?
     @State private var dragOffset: CGFloat = 0
+    @State private var isOverPairZone = false
 
     static let rowSpacing: CGFloat = 2
     /// Distance between row centers — the unit of drag math.
     private static let rowPitch: CGFloat = DeviceRowView.rowHeight + rowSpacing
 
     var body: some View {
-        let main = monitor.devices.filter { !monitor.isRarelyUsed($0) }
-        let rarelyUsed = monitor.devices.filter { monitor.isRarelyUsed($0) }
+        let visible = monitor.devices.filter { !excludedUIDs.contains($0.uid) }
+        let main = visible.filter { !monitor.isRarelyUsed($0) }
+        let rarelyUsed = visible.filter { monitor.isRarelyUsed($0) }
 
         VStack(alignment: .leading, spacing: Self.rowSpacing) {
             ForEach(Array(main.enumerated()), id: \.element.id) { index, device in
@@ -261,8 +296,10 @@ struct DeviceListSection: View {
 
     /// Slot the dragged row currently aims at; `main.count` is the demote
     /// slot (the "Rarely used" row right below the list), allowed only for
-    /// devices that can actually be demoted.
+    /// devices that can actually be demoted. While the cursor hovers the
+    /// pair zone the row stays put — the drag is aiming elsewhere.
     private func dragTarget(from: Int, main: [AudioDevice]) -> Int {
+        guard !isOverPairZone else { return from }
         let delta = Int((dragOffset / Self.rowPitch).rounded())
         let canDemote = !main[from].isBluetooth && monitor.defaultDeviceID != main[from].id
         return min(max(from + delta, 0), canDemote ? main.count : main.count - 1)
@@ -288,15 +325,28 @@ struct DeviceListSection: View {
 
     private func handleReorder(_ event: DeviceRowView.ReorderEvent, index: Int, main: [AudioDevice]) {
         switch event {
-        case let .moved(translation):
+        case let .moved(translation, location):
             draggedUID = main[index].uid
             dragOffset = translation
-        case .finished:
+            let over = onPair != nil && pairZone.contains(location)
+            if over != isOverPairZone {
+                isOverPairZone = over
+                onPairHover?(over)
+            }
+        case let .finished(location):
             defer {
+                if isOverPairZone {
+                    isOverPairZone = false
+                    onPairHover?(false)
+                }
                 draggedUID = nil
                 dragOffset = 0
             }
             guard main.indices.contains(index) else { return }
+            if let onPair, pairZone.contains(location) {
+                onPair(main[index])
+                return
+            }
             let target = dragTarget(from: index, main: main)
             if target == main.count {
                 monitor.markRarelyUsed(main[index])
