@@ -331,6 +331,67 @@
     color: rgba(0, 0, 0, 0.55);
     font-size: 11px;
   }
+  /* Active outputs zone — every device playing now, each with its own
+     slider; a row dragged from the list below drops here to play together */
+  .mock .zone {
+    position: relative;
+    background: #1b1c21;
+    border-radius: 10px;
+    padding: 8px;
+    margin-bottom: 12px;
+  }
+  .mock .zone > .label { display: block; margin: 0 2px 8px; }
+  .mock .zrow + .zrow { margin-top: 10px; }
+  .mock .ztitle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 2px;
+    margin-bottom: 6px;
+    font-size: 13px;
+    font-weight: 600;
+  }
+  .mock .ztitle .zname { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .mock .ztitle .zcheck { margin-left: auto; color: var(--accent); }
+  .mock .ztitle .zx {
+    display: none;
+    margin-left: auto;
+    padding: 2px 4px;
+    color: var(--muted);
+    font-size: 11px;
+    cursor: pointer;
+  }
+  .mock .ztitle .zx:hover { color: var(--text); }
+  .mock .zone.multi .zcheck { display: none; }
+  .mock .zone.multi .zx { display: inline; }
+  .mock .zone .slider { margin-bottom: 0; }
+  .mock .zone .hint {
+    display: none;
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    align-items: center;
+    justify-content: center;
+    border: 1.5px solid var(--accent);
+    border-radius: 10px;
+    background: rgba(91, 155, 255, 0.12);
+    pointer-events: none;
+  }
+  .mock .zone.drop-target .hint { display: flex; }
+  .mock .zone .hint span {
+    background: rgba(18, 18, 21, 0.85);
+    color: var(--accent);
+    font-size: 11px;
+    font-weight: 600;
+    padding: 5px 10px;
+    border-radius: 999px;
+  }
+  .mock .paused {
+    color: var(--muted);
+    font-size: 12px;
+    text-align: center;
+    padding: 8px 6px 4px;
+  }
   .mock .row {
     display: flex;
     align-items: center;
@@ -402,9 +463,11 @@
         <path class="beam" data-flow="music"/>
         <path class="beam" data-flow="safari"/>
         <path class="beam" data-flow="out"/>
+        <path class="beam" data-flow="out2"/>
         <path class="dots" data-flow="music"/>
         <path class="dots" data-flow="safari"/>
         <path class="dots" data-flow="out"/>
+        <path class="dots" data-flow="out2"/>
       </svg>
       <div class="side side-apps" aria-hidden="true">
         <div class="cap2">NOW PLAYING</div>
@@ -425,9 +488,12 @@
           <button class="tab" data-tab="in" aria-label="Microphone">&#127908;</button>
         </div>
         <div data-pane="out">
-          <div class="head"><span class="label">Output</span><span class="dev" id="dev-name-out">AirPods Pro</span></div>
-          <div class="slider" data-master="out" data-vol-icon style="--v: 55%"><span>&#128265;</span></div>
-          <div class="row active" data-device="AirPods Pro" data-bt="AirPods Pro">&#127911; AirPods Pro<span class="x" title="Disconnect">&#10005;</span><span class="check">&#10003;</span></div>
+          <div class="zone" id="zone">
+            <span class="label">Output</span>
+            <div id="zone-rows"></div>
+            <div class="hint"><span>Drop here to play together</span></div>
+          </div>
+          <div class="row" data-device="AirPods Pro" data-bt="AirPods Pro">&#127911; AirPods Pro<span class="x" title="Disconnect">&#10005;</span><span class="check"></span></div>
           <div class="row" data-device="MacBook Speakers">&#128187; MacBook Speakers<span class="check"></span></div>
           <div class="row" data-device="Studio Display">&#128421; Studio Display<span class="check"></span></div>
           <div class="row" data-device="WH-1000XM5" data-bt="WH-1000XM5">&#127911; WH-1000XM5<span class="x" title="Disconnect">&#10005;</span><span class="check"></span></div>
@@ -450,10 +516,13 @@
         <div class="row dim" data-connect="WH-1000XM5">&#127911; <span class="bt-label">WH-1000XM5 &middot; connect</span><span class="check"></span></div>
         <hr>
         <div data-pane="out">
-          <div class="app">&#127925; Music <span class="pct">100%</span></div>
-          <div class="slider" data-app="music" data-vol-icon style="--v: 100%"><span>&#128266;</span></div>
-          <div class="app">&#127760; Safari <span class="pct">35%</span></div>
-          <div class="slider" data-app="safari" data-vol-icon style="--v: 35%"><span>&#128265;</span></div>
+          <div id="apps-out">
+            <div class="app">&#127925; Music <span class="pct">100%</span></div>
+            <div class="slider" data-app="music" data-vol-icon style="--v: 100%"><span>&#128266;</span></div>
+            <div class="app">&#127760; Safari <span class="pct">35%</span></div>
+            <div class="slider" data-app="safari" data-vol-icon style="--v: 35%"><span>&#128265;</span></div>
+          </div>
+          <div class="paused" id="apps-paused" hidden>Per-app volume is paused while playing to multiple outputs</div>
         </div>
         <div data-pane="in">
           <div class="app">&#128249; Zoom <span class="rec">&#9679;</span></div>
@@ -517,16 +586,25 @@
     const mock = document.getElementById("mock");
     const btConnected = { "AirPods Pro": true, "WH-1000XM5": false };
 
+    // Active outputs: one device is the plain system default; two or more
+    // play together through a multi-output, each at its own volume.
+    let activeOut = ["AirPods Pro"];
+    const devVol = { "AirPods Pro": 55 };
+    const volOf = (name) => devVol[name] ?? 70;
+    const isMulti = () => activeOut.length > 1;
+    const outVolume = () => Math.max(...activeOut.map(volOf), 0);
+    const outRow = (name) => document.querySelector(`#mock [data-pane="out"] .row[data-device="${CSS.escape(name)}"]`);
+
     const appSliders = {
       music: document.querySelector('#mock .slider[data-app="music"]'),
       safari: document.querySelector('#mock .slider[data-app="safari"]'),
     };
     const volumeOf = (slider) => parseInt(slider.style.getPropertyValue("--v"), 10) || 0;
-    const masterSlider = document.querySelector('#mock .slider[data-master="out"]');
-    // What you'd hear: the app's fader scaled by the master output volume.
-    const heardVolume = (slider) => (volumeOf(slider) * volumeOf(masterSlider)) / 100;
-    const activeOutRow = () => document.querySelector('#mock [data-pane="out"] .row.active');
+    // What you'd hear: the app's fader scaled by the output volume. While
+    // multi-output plays, per-app faders are released and apps run native.
+    const heardVolume = (slider) => (isMulti() ? outVolume() : (volumeOf(slider) * outVolume()) / 100);
     const icons = ["\u{1F507}", "\u{1F508}", "\u{1F509}", "\u{1F50A}"];
+    const volIcon = (pct) => (pct === 0 ? icons[0] : icons[1 + Math.min(2, Math.floor(pct / 34))]);
 
     // --- Flow curves: app card → its slider in the mock, active row → device card.
     const flowPaths = {};
@@ -573,13 +651,17 @@
         setFlow(key, card.right + 2, card.cy, mockRect.left - 2, y, heardVolume(slider));
       }
 
-      const target = document.querySelector(".dcard.active");
-      if (!target) return hideFlow("out");
-      const rowRect = activeOutRow()?.getBoundingClientRect();
-      const y = rowRect?.width ? rel(rowRect).cy : mockRect.cy;
-      const card = rel(target.getBoundingClientRect());
-      const volume = Math.max(...Object.values(appSliders).map(heardVolume));
-      setFlow("out", mockRect.right + 2, y, card.left - 2, card.cy, volume);
+      // One curve per playing device — the popover fans out on multi-output.
+      ["out", "out2"].forEach((key, index) => {
+        const name = activeOut[index];
+        const target = name && document.querySelector(`.dcard[data-dev="${CSS.escape(name)}"]`);
+        if (!target) return hideFlow(key);
+        const zrowRect = zoneRows.children[index]?.getBoundingClientRect();
+        const y = zrowRect?.width ? rel(zrowRect).cy : mockRect.cy;
+        const card = rel(target.getBoundingClientRect());
+        const volume = isMulti() ? volOf(name) : Math.max(...Object.values(appSliders).map(heardVolume));
+        setFlow(key, mockRect.right + 2, y, card.left - 2, card.cy, volume);
+      });
     };
 
     // --- Side panels mirror the mock's state; they never hold state of their own.
@@ -587,23 +669,26 @@
       for (const [key, slider] of Object.entries(appSliders)) {
         const card = document.querySelector(`[data-app-card="${key}"]`);
         card.style.setProperty("--amp", Math.max(heardVolume(slider) / 100, 0.04));
-        card.querySelector(".apct").textContent = volumeOf(slider) + "%";
+        card.querySelector(".apct").textContent = isMulti() ? "100%" : volumeOf(slider) + "%";
       }
-      const active = activeOutRow()?.dataset.device;
+      // Multi-output suspends per-app faders, exactly like the app does.
+      document.getElementById("apps-out").style.display = isMulti() ? "none" : "";
+      document.getElementById("apps-paused").hidden = !isMulti();
       document.querySelectorAll(".dcard").forEach((card) => {
         const name = card.dataset.dev;
-        const row = document.querySelector(`#mock [data-pane="out"] .row[data-device="${CSS.escape(name)}"]`);
+        const row = outRow(name);
         card.style.display = row && row.parentElement === rareFold ? "none" : ""; // folded → no card
         const off = name in btConnected && !btConnected[name];
+        const playing = !off && activeOut.includes(name);
         card.classList.toggle("off", off);
-        card.classList.toggle("active", !off && name === active);
-        card.querySelector(".state").textContent = off ? "Disconnected" : name === active ? "Active" : "Ready";
+        card.classList.toggle("active", playing);
+        card.querySelector(".state").textContent = off ? "Disconnected" : playing ? "Active" : "Ready";
       });
       drawFlows();
     };
 
     // --- Sliders
-    document.querySelectorAll("#mock .slider").forEach((slider) => {
+    const attachSlider = (slider) => {
       const icon = slider.querySelector("span");
       const label = slider.previousElementSibling?.querySelector?.(".pct");
 
@@ -611,8 +696,10 @@
         const rect = slider.getBoundingClientRect();
         const pct = Math.round(Math.min(Math.max((event.clientX - rect.left) / rect.width, 0), 1) * 100);
         slider.style.setProperty("--v", pct + "%");
+        const zrow = slider.closest(".zrow");
+        if (zrow) devVol[zrow.dataset.zdev] = pct; // zone slider = that device's volume
         if (label) label.textContent = pct + "%";
-        if (slider.hasAttribute("data-vol-icon")) icon.textContent = pct === 0 ? icons[0] : icons[1 + Math.min(2, Math.floor(pct / 34))];
+        if (slider.hasAttribute("data-vol-icon")) icon.textContent = volIcon(pct);
         updateScene();
       };
 
@@ -629,7 +716,44 @@
         slider.addEventListener("pointerup", stop);
         slider.addEventListener("pointercancel", stop);
       });
-    });
+    };
+    document.querySelectorAll("#mock .slider").forEach(attachSlider);
+
+    // --- Active outputs zone. One device = the plain default; a second one
+    // dropped in builds a multi-output, each member with its own volume and
+    // an ✕ to leave. Clicking any list row routes everything there instead.
+    const zone = document.getElementById("zone");
+    const zoneRows = document.getElementById("zone-rows");
+
+    const rebuildZone = () => {
+      zone.classList.toggle("multi", isMulti());
+      zoneRows.replaceChildren(...activeOut.map((name) => {
+        const emoji = outRow(name)?.firstChild.textContent.trim().split(/\s+/)[0] ?? "\u{1F50A}";
+        const pct = volOf(name);
+        const zrow = document.createElement("div");
+        zrow.className = "zrow";
+        zrow.dataset.zdev = name;
+        zrow.innerHTML = '<div class="ztitle"><span class="zico"></span><span class="zname"></span>'
+          + '<span class="zx" title="Stop playing to this device">✕</span>'
+          + '<span class="zcheck">✓</span></div>'
+          + '<div class="slider" data-vol-icon><span></span></div>';
+        zrow.querySelector(".zico").textContent = emoji;
+        zrow.querySelector(".zname").textContent = name;
+        const slider = zrow.querySelector(".slider");
+        slider.style.setProperty("--v", pct + "%");
+        slider.querySelector("span").textContent = volIcon(pct);
+        zrow.querySelector(".zx").addEventListener("click", () => setOut(activeOut.filter((other) => other !== name)));
+        attachSlider(slider);
+        return zrow;
+      }));
+      syncRows();
+    };
+
+    const setOut = (names) => {
+      activeOut = names;
+      rebuildZone();
+      updateScene();
+    };
 
     // --- Tabs (the stage dims its output story while the mic pane is up)
     document.querySelectorAll("#mock .tab").forEach((tab) => {
@@ -642,47 +766,56 @@
       });
     });
 
-    // --- Device rows
+    // --- Output rows: click routes everything to that device — an active
+    // multi-output dissolves, exactly like switching output in the app.
+    document.querySelectorAll('#mock [data-pane="out"] .row[data-device]').forEach((row) => {
+      row.addEventListener("click", () => {
+        if (row.dataset.dragged) return;
+        // A folded device made default leaves the group for good — the app
+        // never hides the current default, and nothing returns automatically.
+        if (row.parentElement === rareFold) {
+          rareFold.parentElement.insertBefore(row, rareToggle);
+          syncRare();
+          ensureCard(row.dataset.device);
+        }
+        setOut([row.dataset.device]);
+      });
+    });
+
+    // --- Input rows: plain default switching, like the app's mic tab.
     const activate = (row) => {
-      const pane = row.closest("[data-pane]").dataset.pane;
-      document.querySelectorAll(`#mock [data-pane="${pane}"] .row[data-device]`).forEach((other) => {
+      document.querySelectorAll('#mock [data-pane="in"] .row[data-device]').forEach((other) => {
         other.classList.remove("active");
         other.querySelector(".check").textContent = "";
       });
       row.classList.add("active");
       row.querySelector(".check").textContent = "✓";
-      document.getElementById("dev-name-" + pane).textContent = row.dataset.device;
-      // A folded device made default leaves the group for good — the app
-      // never hides the current default, and nothing returns automatically.
-      if (row.parentElement === rareFold) {
-        rareFold.parentElement.insertBefore(row, rareToggle);
-        syncRare();
-        ensureCard(row.dataset.device);
-      }
+      document.getElementById("dev-name-in").textContent = row.dataset.device;
     };
 
-    // A disconnect can orphan a pane's selection — fall back to the first
+    // A disconnect can orphan the input selection — fall back to the first
     // device still present, like the app's auto-switch.
-    const ensureActive = (pane) => {
-      const rows = [...document.querySelectorAll(`#mock [data-pane="${pane}"] .row[data-device]`)]
-        .filter((row) => row.style.display !== "none" && !row.closest("[hidden]"));
+    const ensureActiveIn = () => {
+      const rows = [...document.querySelectorAll('#mock [data-pane="in"] .row[data-device]')]
+        .filter((row) => row.style.display !== "none");
       if (!rows.some((row) => row.classList.contains("active")) && rows[0]) activate(rows[0]);
     };
 
-    document.querySelectorAll("#mock [data-pane] .row[data-device]").forEach((row) => {
+    document.querySelectorAll('#mock [data-pane="in"] .row[data-device]').forEach((row) => {
       row.addEventListener("click", () => {
-        if (row.dataset.dragged) return;
         activate(row);
         updateScene();
       });
     });
 
-    // --- Bluetooth, like in the app: connected devices sit in both device
-    // lists, hover shows a disconnect ✕, disconnected ones wait in the shared
-    // BLUETOOTH section and reconnect (routing output there) on click.
-    const syncBluetooth = () => {
-      document.querySelectorAll("#mock [data-bt]").forEach((row) => {
-        row.style.display = btConnected[row.dataset.bt] ? "" : "none";
+    // --- Row visibility: devices playing in the zone leave the out list
+    // (the app excludes them the same way); disconnected Bluetooth waits in
+    // the shared BLUETOOTH section and reconnects (routing there) on click.
+    const syncRows = () => {
+      document.querySelectorAll("#mock [data-pane] .row[data-device]").forEach((row) => {
+        const btOff = row.dataset.bt && !btConnected[row.dataset.bt];
+        const playing = row.closest("[data-pane]").dataset.pane === "out" && activeOut.includes(row.dataset.device);
+        row.style.display = btOff || playing ? "none" : "";
       });
       let anyDisconnected = false;
       document.querySelectorAll("#mock [data-connect]").forEach((row) => {
@@ -699,11 +832,19 @@
     document.querySelectorAll("#mock .row .x").forEach((x) => {
       x.addEventListener("click", (event) => {
         event.stopPropagation();
-        btConnected[x.closest(".row").dataset.bt] = false;
-        syncBluetooth();
-        ensureActive("out");
-        ensureActive("in");
-        updateScene();
+        const name = x.closest(".row").dataset.bt;
+        btConnected[name] = false;
+        // The device is gone mid-pairing: survivors carry on; losing the
+        // only output falls back to the first device still present.
+        let rest = activeOut.filter((other) => other !== name);
+        if (!rest.length) {
+          syncRows();
+          const fallback = [...document.querySelectorAll('#mock [data-pane="out"] .row[data-device]')]
+            .find((row) => row.style.display !== "none" && !row.closest("[hidden]"));
+          rest = fallback ? [fallback.dataset.device] : [];
+        }
+        setOut(rest);
+        ensureActiveIn();
       });
     });
 
@@ -714,15 +855,12 @@
         row.querySelector(".bt-label").textContent = "connecting…";
         setTimeout(() => {
           btConnected[name] = true;
-          syncBluetooth();
-          const target = document.querySelector(`#mock [data-pane="out"] .row[data-bt="${name}"]`);
-          if (target) activate(target);
-          updateScene();
+          setOut([name]); // routing follows the connect, like the app
         }, 700);
       });
     });
 
-    // --- Device cards are clickable too: switch to it, or connect it first.
+    // --- Device cards are clickable too: route there, or connect it first.
     const attachCard = (card) => {
       card.addEventListener("click", () => {
         const name = card.dataset.dev;
@@ -731,9 +869,7 @@
           document.querySelector(`#mock [data-connect="${name}"]`)?.click();
           return;
         }
-        const row = document.querySelector(`#mock [data-pane="out"] .row[data-device="${name}"]`);
-        if (row) activate(row);
-        updateScene();
+        setOut([name]);
       });
     };
     document.querySelectorAll(".dcard").forEach(attachCard);
@@ -772,9 +908,10 @@
       if (!n) { rareFold.hidden = true; rareToggle.classList.remove("open"); }
     };
 
-    // --- Drag a row to reorder it; drop it onto Rarely used to demote.
-    // Bluetooth and the current default are exempt, exactly like the app.
-    const canDemote = (row) => !row.classList.contains("active") && !row.hasAttribute("data-bt");
+    // --- Drag a row to reorder it; drop it onto Rarely used to demote, or
+    // into the zone above to play together with what's already there.
+    // Bluetooth is exempt from demotion, exactly like the app.
+    const canDemote = (row) => !row.hasAttribute("data-bt");
     document.querySelectorAll('#mock [data-pane="out"] .row[data-device]').forEach((row) => {
       row.addEventListener("pointerdown", (event) => {
         if (row.parentElement === rareFold) return; // folded rows just click
@@ -782,8 +919,8 @@
         const grabOffset = startY - row.getBoundingClientRect().top;
         let dragging = false;
         let baseTop = 0;
-        const overRare = (y) => {
-          const r = rareToggle.getBoundingClientRect();
+        const within = (element, y) => {
+          const r = element.getBoundingClientRect();
           return y >= r.top && y <= r.bottom;
         };
         const move = (ev) => {
@@ -794,8 +931,8 @@
             baseTop = row.getBoundingClientRect().top;
           }
           if (!dragging) return;
-          // confine the row to the device-list span (top slot … the group row)
-          let minTop = baseTop;
+          // confine the row to the span from the zone down to the group row
+          let minTop = Math.min(baseTop, zone.getBoundingClientRect().top);
           let maxTop = baseTop;
           for (const sib of row.parentElement.querySelectorAll(".row[data-device]")) {
             if (sib === row || sib.parentElement === rareFold || sib.style.display === "none") continue;
@@ -808,9 +945,11 @@
           }
           const desiredTop = Math.min(Math.max(ev.clientY - grabOffset, minTop), maxTop);
           const center = desiredTop + row.offsetHeight / 2;
-          const dropOK = overRare(ev.clientY) && canDemote(row);
-          rareToggle.classList.toggle("drop-target", dropOK);
-          if (!dropOK) {
+          const overZone = within(zone, ev.clientY);
+          const overRare = within(rareToggle, ev.clientY) && canDemote(row);
+          zone.classList.toggle("drop-target", overZone);
+          rareToggle.classList.toggle("drop-target", overRare);
+          if (!overZone && !overRare) {
             for (const sib of row.parentElement.querySelectorAll(".row[data-device]")) {
               if (sib === row || sib.parentElement === rareFold) continue;
               const r = sib.getBoundingClientRect();
@@ -834,9 +973,12 @@
           row.classList.remove("dragging");
           mock.classList.remove("drag-live");
           rareToggle.classList.remove("drop-target");
+          zone.classList.remove("drop-target");
           row.dataset.dragged = "1"; // swallow the click that follows the drop
           setTimeout(() => delete row.dataset.dragged, 0); // …but only that one
-          if (ev.type === "pointerup" && overRare(ev.clientY) && canDemote(row)) {
+          if (ev.type === "pointerup" && within(zone, ev.clientY)) {
+            setOut([...activeOut, row.dataset.device]); // pair — play together
+          } else if (ev.type === "pointerup" && within(rareToggle, ev.clientY) && canDemote(row)) {
             rareFold.append(row);
           }
           syncRare();
@@ -859,7 +1001,7 @@
     });
 
     window.addEventListener("resize", drawFlows);
-    syncBluetooth();
+    rebuildZone();
     updateScene();
   })();
 </script>
