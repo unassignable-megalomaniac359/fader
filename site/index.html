@@ -8,7 +8,8 @@
 <link rel="canonical" href="https://fader.pantafive.dev/">
 <link rel="icon" type="image/png" href="/favicon.png">
 <link rel="apple-touch-icon" href="/icon.png">
-<meta name="theme-color" content="#0d0e12">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#000000">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Fader">
 <meta property="og:title" content="Fader — volume control for your Mac menu bar">
@@ -23,80 +24,172 @@
 <meta name="twitter:image" content="https://fader.pantafive.dev/og.png">
 <style>
   :root {
-    --bg: #0d0e12;
-    --panel: #16181f;
-    --panel-2: #1d2029;
-    --text: #e8eaf0;
-    --muted: #8b90a0;
-    --accent: #5b9bff;
-    --fill: #e8eaf0;
+    color-scheme: dark;
+    --bg: #000;
+    --text: #f5f5f7;
+    --muted: #86868b;
+    --faint: #6e6e73;
+    --blue: #2997ff;
+    --cta: #0071e3;
+    --hairline: rgba(255, 255, 255, 0.12);
+    --nav-bg: rgba(0, 0, 0, 0.72);
+    --pill-bg: rgba(255, 255, 255, 0.05);
+    --pill-btn: rgba(255, 255, 255, 0.08);
+    --glow: rgba(41, 151, 255, 0.14);
+  }
+  /* Themes: JS stamps data-theme on <html> before paint — system preference
+     by default, the nav toggle overrides it (persisted). Dark is the no-JS
+     fallback. */
+  :root[data-theme="light"] {
+    color-scheme: light;
+    --bg: #fff;
+    --text: #1d1d1f;
+    --muted: #6e6e73;
+    --faint: #86868b;
+    --blue: #0066cc;
+    --hairline: rgba(0, 0, 0, 0.16);
+    --nav-bg: rgba(255, 255, 255, 0.72);
+    --pill-bg: rgba(0, 0, 0, 0.04);
+    --pill-btn: rgba(0, 0, 0, 0.07);
+    --glow: rgba(0, 113, 227, 0.08);
   }
   * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
   body {
-    background: radial-gradient(1200px 600px at 70% -10%, #1a2236 0%, var(--bg) 55%);
+    background: var(--bg);
     color: var(--text);
     font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
     line-height: 1.6;
     min-height: 100vh;
     overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
   }
-  main {
-    max-width: 960px;
+  /* Localnav — Apple's thin blurred product bar */
+  .localnav {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    background: var(--nav-bg);
+    -webkit-backdrop-filter: saturate(180%) blur(20px);
+    backdrop-filter: saturate(180%) blur(20px);
+    border-bottom: 1px solid var(--hairline);
+  }
+  .localnav .ln-wrap {
+    max-width: 980px;
     margin: 0 auto;
-    padding: 96px 24px 48px;
+    padding: 0 22px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+  }
+  .localnav .brand {
+    font-size: 19px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    color: var(--text);
+    text-decoration: none;
+  }
+  .localnav .ln-actions {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 22px;
+    font-size: 12px;
+  }
+  .localnav .ln-actions a { color: var(--text); text-decoration: none; opacity: 0.85; }
+  .localnav .ln-actions a:hover { opacity: 1; }
+  .localnav .ln-cta {
+    background: var(--cta);
+    color: #fff !important;
+    padding: 4px 12px;
+    border-radius: 980px;
+    opacity: 1 !important;
+  }
+  .localnav .ln-cta:hover { background: #0077ed; }
+  .ln-theme {
+    display: flex;
+    align-items: center;
+    border: none;
+    background: transparent;
+    color: var(--text);
+    opacity: 0.85;
+    padding: 0;
+    cursor: pointer;
+  }
+  .ln-theme:hover { opacity: 1; }
+  .ln-theme svg { width: 15px; height: 15px; }
+  [data-theme="light"] .ln-theme .i-sun { display: none; }
+  :root:not([data-theme="light"]) .ln-theme .i-moon { display: none; }
+  main {
+    max-width: 980px;
+    margin: 0 auto;
+    padding: 0 22px;
   }
   .hero {
     display: flex;
     flex-direction: column;
     align-items: center;
     text-align: center;
-    margin-bottom: 96px;
+    padding: clamp(72px, 12vh, 130px) 0 110px;
+    position: relative;
   }
+  .hero::before {
+    content: "";
+    position: absolute;
+    top: 120px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: min(900px, 90vw);
+    height: 600px;
+    background: radial-gradient(closest-side, var(--glow), transparent 70%);
+    pointer-events: none;
+  }
+  .hero > * { position: relative; }
   h1 {
-    font-size: 56px;
+    font-size: clamp(56px, 10vw, 96px);
     font-weight: 700;
-    letter-spacing: -0.02em;
-    margin-bottom: 28px;
+    letter-spacing: -0.015em;
+    line-height: 1.05;
   }
   .tagline {
-    font-size: 21px;
+    font-size: clamp(21px, 3.2vw, 28px);
+    font-weight: 600;
+    line-height: 1.25;
+    letter-spacing: 0.004em;
     color: var(--muted);
-    max-width: 620px;
-    margin: 36px 0 32px;
+    max-width: 740px;
+    margin: 22px 0 36px;
   }
+  .tagline strong { color: var(--text); font-weight: 600; }
   .download {
-    display: block;
-    width: min(480px, 100%);
-    text-align: center;
-    background: var(--accent);
+    display: inline-block;
+    background: var(--cta);
     color: #fff;
     font-size: 17px;
-    font-weight: 600;
-    padding: 14px 28px;
-    border-radius: 12px;
+    font-weight: 400;
+    padding: 12px 24px;
+    border-radius: 980px;
     text-decoration: none;
-    transition: transform 0.15s ease, box-shadow 0.15s ease;
-    box-shadow: 0 8px 24px rgba(91, 155, 255, 0.25);
+    transition: background 0.2s ease;
   }
-  .download:hover { transform: translateY(-1px); box-shadow: 0 12px 32px rgba(91, 155, 255, 0.35); }
+  .download:hover { background: #0077ed; }
   .fineprint {
-    font-size: 13px;
-    color: var(--muted);
-    margin-top: 12px;
+    font-size: 12px;
+    color: var(--faint);
+    margin-top: 14px;
   }
   .brew {
     position: relative;
     display: block;
-    width: min(480px, 100%);
     text-align: center;
-    margin-top: 16px;
-    padding: 10px 56px 10px 16px;
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid #262a36;
-    border-radius: 10px;
+    margin-top: 18px;
+    padding: 8px 70px 8px 18px;
+    background: var(--pill-bg);
+    border: 1px solid var(--hairline);
+    border-radius: 980px;
     font-family: ui-monospace, "SF Mono", Menlo, monospace;
-    font-size: 13px;
-    color: var(--text);
+    font-size: 12px;
+    color: var(--muted);
     user-select: all;
   }
   .brew::before {
@@ -106,22 +199,46 @@
   }
   .brew .copy {
     position: absolute;
-    right: 6px;
+    right: 5px;
     top: 50%;
     transform: translateY(-50%);
     border: none;
-    background: rgba(255, 255, 255, 0.07);
+    background: var(--pill-btn);
     color: var(--muted);
     font: 600 11px -apple-system, BlinkMacSystemFont, sans-serif;
-    padding: 5px 10px;
-    border-radius: 7px;
+    padding: 4px 10px;
+    border-radius: 980px;
     cursor: pointer;
     user-select: none;
   }
   .brew .copy:hover { color: var(--text); }
   /* Stage — sources flow through the popover into the active device */
   .stage {
+    /* Stage-scoped palette: the mockup mirrors the real app in both
+       appearances. Light values are sampled from a real light-mode
+       screenshot of the app (popover material, sliders, separators). */
+    --text: #e8eaf0;
+    --muted: #8b90a0;
+    --accent: #5b9bff;
+    --fill: #e8eaf0;
+    --card-bg: #101218;
+    --card-border: #1f2330;
+    --card-border-hover: #343a4c;
+    --m-bg: #121215;
+    --m-border: #26262b;
+    --m-shadow: rgba(0, 0, 0, 0.5);
+    --m-track: #1d1d21;
+    --m-seg: #3a3a3f;
+    --m-zone: #1b1c21;
+    --m-slider: #232328;
+    --m-hr: #242428;
+    --m-hover: rgba(255, 255, 255, 0.05);
+    --m-drag: rgba(255, 255, 255, 0.07);
+    --m-ghost: #3a4150;
+    --m-hint-bg: rgba(18, 18, 21, 0.85);
+    color: var(--text);
     position: relative;
+    margin-top: clamp(56px, 9vh, 88px);
     width: min(1060px, calc(100vw - 32px));
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(300px, 420px) minmax(0, 1fr);
@@ -172,8 +289,8 @@
     display: flex;
     align-items: center;
     gap: 10px;
-    background: #101218;
-    border: 1px solid #1f2330;
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
     border-radius: 12px;
     padding: 12px 14px;
     font-size: 13px;
@@ -211,9 +328,9 @@
     to { transform: scaleY(1); }
   }
   .dcard { cursor: pointer; transition: border-color 0.25s ease, box-shadow 0.25s ease, opacity 0.25s ease; }
-  .dcard:hover { border-color: #343a4c; }
+  .dcard:hover { border-color: var(--card-border-hover); }
   .dcard .state { font-size: 11px; color: var(--muted); }
-  .dcard.active { border-color: rgba(91, 155, 255, 0.55); box-shadow: 0 0 26px rgba(91, 155, 255, 0.16); }
+  .dcard.active { border-color: color-mix(in srgb, var(--accent) 55%, transparent); box-shadow: 0 0 26px color-mix(in srgb, var(--accent) 16%, transparent); }
   .dcard.active .state { color: var(--accent); }
   .dcard.off { opacity: 0.45; border-style: dashed; }
   .dico { position: relative; font-size: 16px; line-height: 1; }
@@ -221,7 +338,7 @@
     content: "";
     position: absolute;
     inset: -7px;
-    border: 1.5px solid rgba(91, 155, 255, 0.5);
+    border: 1.5px solid color-mix(in srgb, var(--accent) 50%, transparent);
     border-radius: 50%;
     animation: pulse 1.6s ease-out infinite;
   }
@@ -243,18 +360,18 @@
   /* Popover mockup — mirrors the real Fader popover */
   .mock {
     width: min(420px, 100%);
-    background: #121215;
-    border: 1px solid #26262b;
+    background: var(--m-bg);
+    border: 1px solid var(--m-border);
     border-radius: 16px;
     padding: 14px;
-    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 24px 80px var(--m-shadow);
     font-size: 14px;
     position: relative;
     z-index: 1;
   }
   .mock .tabs {
     display: flex;
-    background: #1d1d21;
+    background: var(--m-track);
     border-radius: 8px;
     padding: 2px;
     margin-bottom: 12px;
@@ -270,7 +387,7 @@
     cursor: pointer;
   }
   .mock .tab.active {
-    background: #3a3a3f;
+    background: var(--m-seg);
     color: var(--text);
   }
   .mock[data-tab="out"] [data-pane="in"],
@@ -296,7 +413,7 @@
   .mock .head .dev { margin-left: auto; color: var(--muted); font-size: 12px; }
   .mock .slider {
     height: 22px;
-    background: #232328;
+    background: var(--m-slider);
     border-radius: 11px;
     position: relative;
     margin-bottom: 12px;
@@ -335,7 +452,7 @@
      slider; a row dragged from the list below drops here to play together */
   .mock .zone {
     position: relative;
-    background: #1b1c21;
+    background: var(--m-zone);
     border-radius: 10px;
     padding: 8px;
     margin-bottom: 12px;
@@ -374,12 +491,12 @@
     justify-content: center;
     border: 1.5px solid var(--accent);
     border-radius: 10px;
-    background: rgba(91, 155, 255, 0.12);
+    background: color-mix(in srgb, var(--accent) 12%, transparent);
     pointer-events: none;
   }
   .mock .zone.drop-target .hint { display: flex; }
   .mock .zone .hint span {
-    background: rgba(18, 18, 21, 0.85);
+    background: var(--m-hint-bg);
     color: var(--accent);
     font-size: 11px;
     font-weight: 600;
@@ -401,12 +518,12 @@
     cursor: pointer;
     border-radius: 6px;
   }
-  .mock .row:hover { background: rgba(255, 255, 255, 0.05); }
+  .mock .row:hover { background: var(--m-hover); }
   .mock .row.dim { color: var(--muted); }
-  .mock .row.dragging { background: rgba(255, 255, 255, 0.07); opacity: 0.9; position: relative; z-index: 5; cursor: grabbing; }
+  .mock .row.dragging { background: var(--m-drag); opacity: 0.9; position: relative; z-index: 5; cursor: grabbing; }
   .mock.drag-live .row:not(.dragging):hover { background: transparent; }
-  .mock .row.drop-target { background: rgba(91, 155, 255, 0.18); color: var(--text); }
-  .mock .row.ghost { outline: 1px dashed #3a4150; outline-offset: -1px; opacity: 0.65; }
+  .mock .row.drop-target { background: color-mix(in srgb, var(--accent) 18%, transparent); color: var(--text); }
+  .mock .row.ghost { outline: 1px dashed var(--m-ghost); outline-offset: -1px; opacity: 0.65; }
   .mock .row .chev { font-size: 15px; line-height: 1; transition: transform 0.2s ease; }
   .mock .row.open .chev { transform: rotate(90deg); }
   .mock .fold .row { padding-left: 24px; }
@@ -427,37 +544,123 @@
     font-weight: 600;
   }
   .mock .app .pct { margin-left: auto; color: var(--muted); font-weight: 400; font-variant-numeric: tabular-nums; }
-  .mock hr { border: none; border-top: 1px solid #242428; margin: 10px 0; }
-  /* About — plain prose instead of feature cards */
-  .about {
-    max-width: 620px;
-    margin: 0 auto 96px;
-    font-size: 16px;
+  .mock hr { border: none; border-top: 1px solid var(--m-hr); margin: 10px 0; }
+  /* Feature stories — Apple product-page rhythm: eyebrow, big headline, copy */
+  .feature {
+    padding: clamp(72px, 11vh, 120px) 0;
+    border-top: 1px solid var(--hairline);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
   }
-  .about h2 {
-    font-size: 20px;
-    letter-spacing: -0.01em;
-    margin: 40px 0 12px;
+  .feature .eyebrow {
+    font-size: 17px;
+    font-weight: 600;
+    color: var(--blue);
+    margin-bottom: 10px;
   }
-  .about h2:first-child { margin-top: 0; }
-  .about p {
-    text-align: justify;
-    hyphens: auto;
-  }
-  .about p + p { margin-top: 16px; }
-  footer {
+  .feature h2 {
+    font-size: clamp(32px, 5.4vw, 56px);
+    font-weight: 700;
+    letter-spacing: -0.015em;
+    line-height: 1.08;
     text-align: center;
-    font-size: 15px;
+    max-width: 820px;
+    margin-bottom: 32px;
+  }
+  .feature h2 .grad {
+    background: linear-gradient(90deg, #2997ff, #7bd5ff);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+  }
+  /* Two paragraphs sit as two columns under the centered headline —
+     Apple's pattern for longer copy; they never justify text */
+  .feature .copy {
+    max-width: 820px;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 18px 48px;
+    font-size: 17px;
     color: var(--muted);
-    padding-bottom: 48px;
+  }
+  .feature .copy:has(> p:only-child) { grid-template-columns: 1fr; max-width: 640px; }
+  .feature .copy strong { color: var(--text); font-weight: 600; }
+  @media (max-width: 720px) {
+    .feature .copy { grid-template-columns: 1fr; max-width: 640px; }
+  }
+  /* Scroll reveal — one gentle fade-up per section */
+  .reveal {
+    opacity: 0;
+    transform: translateY(26px);
+    transition: opacity 0.8s ease, transform 0.8s ease;
+  }
+  .reveal.in { opacity: 1; transform: none; }
+  [data-theme="light"] .feature h2 .grad { background: linear-gradient(90deg, #0066cc, #2997ff); -webkit-background-clip: text; background-clip: text; }
+  [data-theme="light"] .stage {
+      --text: #1a1a1c;
+      --muted: #76767b;
+      --accent: #2e62f5;
+      --fill: #fff;
+      --card-bg: #fff;
+      --card-border: rgba(0, 0, 0, 0.1);
+      --card-border-hover: rgba(0, 0, 0, 0.25);
+      --m-bg: #f7f8fa;
+      --m-border: rgba(0, 0, 0, 0.12);
+      --m-shadow: rgba(0, 0, 0, 0.22);
+      --m-track: #b0b1b1;
+      --m-seg: #9c9d9d;
+      --m-zone: #e5e8f1;
+      --m-slider: #e4e5e9;
+      --m-hr: #e4e4e6;
+      --m-hover: rgba(0, 0, 0, 0.05);
+      --m-drag: rgba(0, 0, 0, 0.07);
+      --m-ghost: #b9bac0;
+      --m-hint-bg: rgba(255, 255, 255, 0.9);
+  }
+  [data-theme="light"] .scard { box-shadow: 0 4px 18px rgba(0, 0, 0, 0.07); }
+  @media (prefers-reduced-motion: reduce) {
+    .reveal { opacity: 1; transform: none; transition: none; }
+    html { scroll-behavior: auto; }
+  }
+  footer {
+    border-top: 1px solid var(--hairline);
+    text-align: center;
+    font-size: 12px;
+    color: var(--faint);
+    padding: 24px 0 40px;
   }
   footer a { color: var(--muted); }
 </style>
+<script>
+  // Resolve the theme before first paint: stored choice wins, system otherwise.
+  document.documentElement.dataset.theme =
+    localStorage.getItem("theme")
+    || (matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark");
+</script>
 </head>
 <body>
+<nav class="localnav">
+  <div class="ln-wrap">
+    <a class="brand" href="/">Fader</a>
+    <div class="ln-actions">
+      <a href="https://github.com/pantafive/fader">GitHub</a>
+      <a class="ln-cta" href="#install">Install</a>
+      <button class="ln-theme" id="theme-toggle" aria-label="Toggle dark and light theme">
+        <svg class="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4.4"/><path d="M12 2.5v2.6M12 18.9v2.6M2.5 12h2.6M18.9 12h2.6M5.2 5.2l1.9 1.9M16.9 16.9l1.9 1.9M18.8 5.2l-1.9 1.9M7.1 16.9l-1.9 1.9"/></svg>
+        <svg class="i-moon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M20.6 14.2a8.8 8.8 0 0 1-10.8-10.8 9.3 9.3 0 1 0 10.8 10.8z"/></svg>
+      </button>
+    </div>
+  </div>
+</nav>
 <main>
-  <section class="hero">
+  <section class="hero" id="install">
     <h1>Fader</h1>
+    <p class="tagline"><strong>Per-app volume.</strong> <strong>One-click output switching.</strong> Audio on <strong>two devices at once.</strong> Right in your Mac&nbsp;menu&nbsp;bar.</p>
+    <a class="download" href="https://github.com/pantafive/fader/releases/latest/download/Fader.dmg">Download for macOS</a>
+    <span class="brew">brew install --cask pantafive/tap/fader<button class="copy" aria-label="Copy command">Copy</button></span>
+    <p class="fineprint">macOS 15+ &middot; Apple silicon &middot; free &amp; open source</p>
     <div class="stage" id="stage" data-tab="out">
       <svg id="flows" aria-hidden="true">
         <path class="beam" data-flow="music"/>
@@ -549,30 +752,59 @@
         </div>
       </div>
     </div>
-    <p class="tagline">Per-app volume, one-click output switching, and audio on two devices at once&nbsp;&mdash; right in your Mac&nbsp;menu&nbsp;bar.</p>
-    <a class="download" href="https://github.com/pantafive/fader/releases/latest/download/Fader.dmg">Download for macOS</a>
-    <span class="brew">brew install --cask pantafive/tap/fader<button class="copy" aria-label="Copy command">Copy</button></span>
-    <p class="fineprint">macOS 15+ &middot; Apple silicon &middot; free &amp; open source</p>
   </section>
 
-  <section class="about">
-    <h2>Switch audio output on Mac in one click</h2>
-    <p>Pick any output device from the menu bar and your sound moves there: headphones, speakers, a display, AirPlay. The active one is marked, so you always know where audio is going. Drag a row and you set its priority; from then on Fader switches to a higher-ranked device when it connects, and falls back to the best one still present when the current default disappears. This ranking stays dormant until you reorder the list the first time, so nothing changes behind your back.</p>
-    <p>Bluetooth gets the same single click. Paired headphones that are currently disconnected still show up in the list; clicking one connects it and routes audio to it, and you disconnect from that same row. Wired devices you have not used in 30 days fold into a "Rarely used" group to keep the list short, and you can drag a row onto it to demote one yourself. System volume and mute stay in sync with your volume keys and Control Center.</p>
-    <h2>Play Mac audio on two devices at once</h2>
-    <p>Drag a device from the list onto the output section and both play together: one movie, two pairs of headphones, one plane. Each device in the group keeps its own volume slider, the ✕ removes it, and clicking any device in the list routes everything back to that single device. Try it in the popover above.</p>
-    <p>Fader builds this on the same multi-output device you could assemble by hand in Audio MIDI Setup, then removes it when you are done. Two things change while a group plays. The volume keys do nothing, because macOS gives a multi-output device no master volume — the per-device sliders replace them. And per-app faders pause, returning with their saved levels as soon as you are back on one output.</p>
-    <h2>Per-app volume on Mac: a fader for every app</h2>
-    <p>Every app that plays sound gets its own volume fader and a mute button. The levels persist across launches. Scroll the wheel or swipe the trackpad over any slider to adjust it without clicking.</p>
-    <p>An app left at 100% and unmuted is touched by nothing: no tap, no processing, bit-perfect native playback. A tap exists only while a fader sits below full volume or the app is muted.</p>
-    <h2>One honest permission</h2>
-    <p>Most of Fader needs no permissions. Device switching, system volume, and the entire microphone tab work the moment you install. Per-app volume is the one exception: it uses Core Audio process taps, an API macOS 14.4 added and then gated behind the "System Audio Recording" permission. Fader asks for it the first time you move an app's fader.</p>
-    <p>The tapped audio is re-rendered to your output with the gain applied and never leaves the Mac. There are no kernel extensions, no virtual audio drivers, nothing to install in Settings. The name of that permission sounds broader than what Fader does with it, so I would rather explain it here than have it surprise you in a dialog.</p>
-    <h2>Switch microphones and watch input</h2>
-    <p>The microphone tab switches your default input and sets its input gain from a slider. On devices whose gain is fixed in hardware the slider disables itself, so the control never lies about what it can do. You also see which apps are using the microphone right now, which is enough to spot a forgotten recorder.</p>
-    <p>That indicator is the limit of what is possible per app. Core Audio exposes no per-app input gain, so Fader cannot offer one; this is an OS-level API boundary, not a feature waiting on the roadmap.</p>
-    <h2>Native and private</h2>
-    <p>Fader is a native Swift app for Apple silicon, macOS 15 and later, signed and notarized. Free under the MIT license, it is private in a way you can check: zero telemetry, zero analytics, zero network code. The app has no way to phone home.</p>
+  <section class="feature reveal">
+    <p class="eyebrow">Outputs</p>
+    <h2>Switch audio output on Mac in one click.</h2>
+    <div class="copy">
+      <p>Pick any output device from the menu bar and your sound moves there: headphones, speakers, a display, AirPlay. The active one is marked, so you always know where audio is going. <strong>Drag a row and you set its priority</strong>; from then on Fader switches to a higher-ranked device when it connects, and falls back to the best one still present when the current default disappears. This ranking stays dormant until you reorder the list the first time, so nothing changes behind your back.</p>
+      <p>Bluetooth gets the same single click. Paired headphones that are currently disconnected still show up in the list; clicking one connects it and routes audio to it, and you disconnect from that same row. Wired devices you have not used in 30 days fold into a "Rarely used" group to keep the list short, and you can drag a row onto it to demote one yourself. <strong>System volume and mute stay in sync</strong> with your volume keys and Control Center.</p>
+    </div>
+  </section>
+
+  <section class="feature reveal">
+    <p class="eyebrow">Together</p>
+    <h2>Play Mac audio on <span class="grad">two devices at once</span>.</h2>
+    <div class="copy">
+      <p>Drag a device from the list onto the output section and both play together: <strong>one movie, two pairs of headphones, one plane</strong>. Each device in the group keeps its own volume slider, the ✕ removes it, and clicking any device in the list routes everything back to that single device. Try it in the popover above.</p>
+      <p>Fader builds this on the same multi-output device you could assemble by hand in Audio MIDI Setup, then removes it when you are done. Two things change while a group plays. The volume keys do nothing, because macOS gives a multi-output device no master volume — the per-device sliders replace them. And per-app faders pause, returning with their saved levels as soon as you are back on one output.</p>
+    </div>
+  </section>
+
+  <section class="feature reveal">
+    <p class="eyebrow">Mixer</p>
+    <h2>Per-app volume on Mac. A fader for every app.</h2>
+    <div class="copy">
+      <p>Every app that plays sound gets its own volume fader and a mute button. The levels persist across launches. Scroll the wheel or swipe the trackpad over any slider to adjust it without clicking.</p>
+      <p>An app left at 100% and unmuted is touched by nothing: <strong>no tap, no processing, bit-perfect native playback</strong>. A tap exists only while a fader sits below full volume or the app is muted.</p>
+    </div>
+  </section>
+
+  <section class="feature reveal">
+    <p class="eyebrow">Microphone</p>
+    <h2>Switch microphones and watch input.</h2>
+    <div class="copy">
+      <p>The microphone tab switches your default input and sets its input gain from a slider. On devices whose gain is fixed in hardware the slider disables itself, so the control never lies about what it can do. You also see <strong>which apps are using the microphone right now</strong>, which is enough to spot a forgotten recorder.</p>
+      <p>That indicator is the limit of what is possible per app. Core Audio exposes no per-app input gain, so Fader cannot offer one; this is an OS-level API boundary, not a feature waiting on the roadmap.</p>
+    </div>
+  </section>
+
+  <section class="feature reveal">
+    <p class="eyebrow">Privacy</p>
+    <h2>One honest permission.</h2>
+    <div class="copy">
+      <p>Most of Fader needs no permissions. Device switching, system volume, and the entire microphone tab work the moment you install. Per-app volume is the one exception: it uses Core Audio process taps, an API macOS 14.4 added and then gated behind the "System Audio Recording" permission. Fader asks for it the first time you move an app's fader.</p>
+      <p>The tapped audio is re-rendered to your output with the gain applied and <strong>never leaves the Mac</strong>. There are no kernel extensions, no virtual audio drivers, nothing to install in Settings. The name of that permission sounds broader than what Fader does with it, so I would rather explain it here than have it surprise you in a dialog.</p>
+    </div>
+  </section>
+
+  <section class="feature reveal">
+    <p class="eyebrow">Open source</p>
+    <h2>Native and private.</h2>
+    <div class="copy">
+      <p>Fader is a native Swift app for Apple silicon, macOS 15 and later, signed and notarized. Free under the MIT license, it is private in a way you can check: <strong>zero telemetry, zero analytics, zero network code</strong>. The app has no way to phone home.</p>
+    </div>
   </section>
 
   <footer>
@@ -1002,6 +1234,34 @@
         setTimeout(() => { copyButton.textContent = "Copy"; }, 1500);
       });
     });
+
+    // --- Theme toggle: flips the data-theme set before paint and remembers
+    // the choice; without a stored choice the page keeps following the system.
+    const applyTheme = (theme) => {
+      document.documentElement.dataset.theme = theme;
+      document.querySelectorAll('meta[name="theme-color"]')
+        .forEach((meta) => { meta.content = theme === "light" ? "#ffffff" : "#000000"; });
+    };
+    document.getElementById("theme-toggle").addEventListener("click", () => {
+      const next = document.documentElement.dataset.theme === "light" ? "dark" : "light";
+      localStorage.setItem("theme", next);
+      applyTheme(next);
+    });
+    matchMedia("(prefers-color-scheme: light)").addEventListener("change", (event) => {
+      if (!localStorage.getItem("theme")) applyTheme(event.matches ? "light" : "dark");
+    });
+
+    // --- Scroll reveal: each feature section fades up once, Apple-style.
+    // prefers-reduced-motion is handled in CSS — sections render in place.
+    const io = new IntersectionObserver((entries) => {
+      for (const entry of entries) {
+        if (entry.isIntersecting) {
+          entry.target.classList.add("in");
+          io.unobserve(entry.target);
+        }
+      }
+    }, { threshold: 0.15 });
+    document.querySelectorAll(".reveal").forEach((section) => io.observe(section));
 
     window.addEventListener("resize", drawFlows);
     rebuildZone();
