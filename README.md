@@ -6,7 +6,7 @@ A macOS menu bar app for audio output switching and per-app volume. Switch the o
 
 <p align="center"><img src="docs/screenshot.png" alt="Fader popover under the menu bar: output devices, Bluetooth section, per-app volume faders"></p>
 
-No telemetry, no analytics. The app's one network call is the update check: Sparkle asks GitHub for the latest release, and one click turns it off. Per-app volume is processed on-device through Core Audio process taps (an API added in macOS 14.4), so there is no kernel extension and no virtual audio driver to install. Requires macOS 15+ on Apple silicon.
+No telemetry, no analytics. Per-app volume is processed on-device through Core Audio process taps (an API added in macOS 14.4), so there is no kernel extension and no virtual audio driver to install. Requires macOS 15+ on Apple silicon.
 
 ## Install
 
@@ -52,7 +52,7 @@ The permission's name sounds broader than what Fader does with it: the tapped au
 
 ## Privacy
 
-Fader collects nothing about you. Its one network request is the update check: Sparkle fetches the release feed and the new dmg from GitHub, sends no system profile, and turns off with one click in the menu. The claim is checkable: the updater is the only code in the source that touches the network.
+Fader collects nothing about you: no telemetry, no analytics. The claim is checkable — the source is open, read it.
 
 ## Development
 
