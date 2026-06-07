@@ -208,3 +208,31 @@ jobs:
             "dist/Fader.dmg" "dist/Fader-$VERSION.dmg" "dist/Fader-$VERSION-dSYM.zip" \
             "dist/appcast.xml" --clobber
           gh release edit "$GITHUB_REF_NAME" --draft=false
+
+      # After undraft only — the cask must never point at an unpublished dmg.
+      # TAP_PUSH_TOKEN: fine-grained PAT, homebrew-tap repo only, Contents
+      # read/write; expires yearly. If this step fails the release is already
+      # live — fix the token and re-run, the no-diff guard makes it safe.
+      - name: Checkout homebrew-tap
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          repository: pantafive/homebrew-tap
+          token: ${{ secrets.TAP_PUSH_TOKEN }}
+          path: tap
+
+      - name: Bump Homebrew cask
+        run: |
+          VERSION=${GITHUB_REF_NAME#v}
+          SHA256=$(shasum -a 256 "dist/Fader-$VERSION.dmg" | awk '{print $1}')
+          cd tap
+          sed -i '' \
+            -e "s/^  version .*/  version \"$VERSION\"/" \
+            -e "s/^  sha256 .*/  sha256 \"$SHA256\"/" Casks/fader.rb
+          if git diff --quiet; then
+            echo "Cask already at $VERSION"
+            exit 0
+          fi
+          git -c user.name="github-actions[bot]" \
+              -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+              commit -am "fader $VERSION"
+          git push
