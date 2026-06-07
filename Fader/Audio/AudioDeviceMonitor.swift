@@ -2,64 +2,6 @@ import CoreAudio
 import Observation
 import os
 
-/// An audio device with channels in the monitored direction.
-struct AudioDevice: Identifiable, Hashable {
-    let id: AudioDeviceID
-    let uid: String
-    let name: String
-    let transport: UInt32
-    /// Per-scope data sources ('hdpn', 'ispk', 'imic', …), 0 when absent.
-    /// Read at construction; on Apple Silicon plug/unplug swaps the HAL
-    /// device itself, so the values can't go stale within one device's
-    /// lifetime.
-    let outputDataSource: UInt32
-    let inputDataSource: UInt32
-
-    var isBluetooth: Bool {
-        transport == kAudioDeviceTransportTypeBluetooth || transport == kAudioDeviceTransportTypeBluetoothLE
-    }
-
-    /// CoreAudio UIDs for Bluetooth devices start with the MAC address,
-    /// e.g. "50-C0-F0-00-1C-78:output" — IOBluetooth uses the same dashed form.
-    func matches(bluetoothID: String) -> Bool {
-        uid.lowercased().hasPrefix(bluetoothID.lowercased())
-    }
-
-    /// SF Symbol for the row icon. The paired IOBluetooth peer, when one
-    /// matches by MAC, carries the minor class and the canonical name.
-    func symbolName(direction: AudioDirection, bluetoothPeer: BluetoothAudioDevice?) -> String {
-        if isBluetooth {
-            return DeviceSymbol.bluetooth(
-                name: bluetoothPeer?.name ?? name,
-                minorClass: bluetoothPeer?.minorClass ?? 0
-            )
-        }
-        return DeviceSymbol.wired(
-            transport: transport,
-            dataSource: direction == .output ? outputDataSource : inputDataSource,
-            direction: direction
-        )
-    }
-}
-
-extension AudioDevice {
-    /// Reads the device's identity straight from the HAL; nil once it's gone.
-    /// (Lives in an extension to keep the memberwise initializer.)
-    init?(id: AudioObjectID) {
-        guard let uid = try? id.readDeviceUID(),
-              let name = try? id.readString(kAudioObjectPropertyName)
-        else { return nil }
-        var transport: UInt32 = 0
-        try? id.read(kAudioDevicePropertyTransportType, into: &transport)
-        var outputDataSource: UInt32 = 0
-        try? id.read(kAudioDevicePropertyDataSource, scope: kAudioDevicePropertyScopeOutput, into: &outputDataSource)
-        var inputDataSource: UInt32 = 0
-        try? id.read(kAudioDevicePropertyDataSource, scope: kAudioDevicePropertyScopeInput, into: &inputDataSource)
-        self.init(id: id, uid: uid, name: name, transport: transport,
-                  outputDataSource: outputDataSource, inputDataSource: inputDataSource)
-    }
-}
-
 /// Watches the devices of one direction and the system default, and switches
 /// the default. Usage stamps and drag-priority persist per direction.
 @MainActor
@@ -156,9 +98,7 @@ final class AudioDeviceMonitor {
         devices = sorted(ids.compactMap { id in
             guard id.channelCount(scope: direction.scope) > 0,
                   let device = AudioDevice(id: id),
-                  // Fader's own aggregates (tap devices, the multi-output) are
-                  // plumbing, not user choices.
-                  device.transport != kAudioDeviceTransportTypeAggregate || !device.name.hasPrefix("Fader")
+                  !device.isFaderPlumbing
             else { return nil }
             return device
         })
@@ -170,48 +110,35 @@ final class AudioDeviceMonitor {
 
     // MARK: - Priority
 
-    private func rank(_ uid: String) -> Int {
-        priority.firstIndex(of: uid) ?? Int.max
-    }
-
-    /// Ranked devices in priority order first, unranked after, alphabetical
-    /// within equal rank.
     private func sorted(_ list: [AudioDevice]) -> [AudioDevice] {
-        list.sorted {
-            let lhs = rank($0.uid)
-            let rhs = rank($1.uid)
-            if lhs != rhs { return lhs < rhs }
-            return $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
-        }
+        DevicePriorityPolicy.ordered(list, priority: priority)
     }
 
-    /// Priority-driven default switching, gated to explicit events so it
-    /// never fights a manual choice:
-    /// - exactly one ranked device appeared (hotplug, not a wake storm) and
-    ///   it outranks the current default → switch to it;
-    /// - the previous default disappeared → override macOS's fallback with
-    ///   the best-ranked device still present.
+    /// Applies the policy's auto-switch decision (see DevicePriorityPolicy).
     private func autoSwitch(previousUIDs: Set<String>, defaultUID: String?) {
         // While multi-output plays, the default is Fader's own aggregate —
         // priority switching would silently tear the pairing apart.
         guard hasBaseline, defaultUID != MultiOutputController.aggregateUID else { return }
 
-        if let previous = lastDefaultUID, previousUIDs.contains(previous),
-           !devices.contains(where: { $0.uid == previous }) {
-            if let fallback = devices.filter({ rank($0.uid) != Int.max }).min(by: { rank($0.uid) < rank($1.uid) }),
-               fallback.uid != defaultUID {
-                Self.logger.info("Default device disappeared; switching to \(fallback.name)")
-                setDefault(fallback)
-            }
+        let decision = DevicePriorityPolicy.autoSwitch(
+            presentUIDs: devices.map(\.uid),
+            previousUIDs: previousUIDs,
+            priority: priority,
+            previousDefaultUID: lastDefaultUID,
+            currentDefaultUID: defaultUID
+        )
+        switch decision {
+        case .stay:
             return
+        case let .fallback(toUID: uid):
+            guard let device = devices.first(where: { $0.uid == uid }) else { return }
+            Self.logger.info("Default device disappeared; switching to \(device.name)")
+            setDefault(device)
+        case let .hotplug(toUID: uid):
+            guard let device = devices.first(where: { $0.uid == uid }) else { return }
+            Self.logger.info("Higher-priority device connected; switching to \(device.name)")
+            setDefault(device)
         }
-
-        let appeared = devices.filter { !previousUIDs.contains($0.uid) && rank($0.uid) != Int.max }
-        guard appeared.count == 1, let candidate = appeared.first, let defaultUID,
-              rank(candidate.uid) < rank(defaultUID)
-        else { return }
-        Self.logger.info("Higher-priority device connected; switching to \(candidate.name)")
-        setDefault(candidate)
     }
 
     /// Records that the current default output is in use. Writes are throttled
