@@ -58,9 +58,33 @@ jobs:
             CODE_SIGN_INJECT_BASE_ENTITLEMENTS=NO \
             -derivedDataPath build build
 
+      # SPM builds Sparkle's nested helpers ad-hoc signed and Xcode re-signs
+      # only the framework's outer layer — notarization rejects the helpers
+      # (no Developer ID, no timestamp). Re-sign inside-out, then the
+      # framework, then the app, whose seal over Frameworks/ went stale the
+      # moment the nested code changed. Validated locally 2026-06-07:
+      # notarytool Accepted with exactly this sequence.
+      - name: Sign Sparkle helpers
+        env:
+          SIGNING_IDENTITY: ${{ secrets.DEVELOPER_ID_IDENTITY }}
+        run: |
+          APP=build/Build/Products/Release/Fader.app
+          SPARKLE=$APP/Contents/Frameworks/Sparkle.framework
+          for ITEM in "$SPARKLE/Versions/B/XPCServices/Installer.xpc" \
+                      "$SPARKLE/Versions/B/XPCServices/Downloader.xpc" \
+                      "$SPARKLE/Versions/B/Autoupdate" \
+                      "$SPARKLE/Versions/B/Updater.app"; do
+            codesign --force --options runtime --timestamp \
+              --preserve-metadata=entitlements -s "$SIGNING_IDENTITY" "$ITEM"
+          done
+          codesign --force --options runtime --timestamp -s "$SIGNING_IDENTITY" "$SPARKLE"
+          codesign --force --options runtime --timestamp \
+            --entitlements Fader/Resources/Fader.entitlements -s "$SIGNING_IDENTITY" "$APP"
+
       # DEPLOYMENT_POSTPROCESSING strip is finicky with the plain `build`
       # action — verify it actually ran and the signature survived before
-      # spending a notarization round-trip.
+      # spending a notarization round-trip. --deep walks into Sparkle's
+      # helpers, exactly the layer the re-sign step exists for.
       - name: Verify strip and signature
         run: |
           BIN=build/Build/Products/Release/Fader.app/Contents/MacOS/Fader
@@ -69,7 +93,9 @@ jobs:
             echo "Binary not stripped: $DEFINED defined symbols" >&2
             exit 1
           fi
-          codesign --verify --strict build/Build/Products/Release/Fader.app
+          codesign --verify --strict --deep build/Build/Products/Release/Fader.app
+          codesign -d --entitlements - build/Build/Products/Release/Fader.app 2>&1 \
+            | grep -q audio-input || { echo "Entitlements lost in re-sign" >&2; exit 1; }
 
       - name: Notarize and package
         env:
