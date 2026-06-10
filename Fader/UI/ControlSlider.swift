@@ -11,8 +11,21 @@ struct ControlSlider: View {
 
     @State private var isDragging = false
     @State private var scrollMonitor: Any?
+    @Environment(\.colorScheme) private var colorScheme
 
     private let height: CGFloat = 22
+
+    /// Off-screen rendering has no NSVisualEffectView, so `quaternarySystemFill`
+    /// (≈5% black, plain-alpha composited) lands ~242 on the light window
+    /// background — invisible under the pure-white fill. Vibrancy would blend it
+    /// to a clear mid-gray; the harness can't, so substitute one. Light only;
+    /// dark already reads (white fill on a dark track).
+    private var trackColor: Color {
+        #if RENDER_SHOTS
+            if colorScheme == .light { return Color(white: 0.84) }
+        #endif
+        return Color(nsColor: .quaternarySystemFill)
+    }
 
     var body: some View {
         GeometryReader { proxy in
@@ -22,7 +35,7 @@ struct ControlSlider: View {
 
             ZStack(alignment: .leading) {
                 Capsule()
-                    .fill(Color(nsColor: .quaternarySystemFill))
+                    .fill(trackColor)
                     .overlay {
                         Capsule().strokeBorder(Color.primary.opacity(0.06), lineWidth: 0.5)
                     }
